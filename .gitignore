@@ -1,0 +1,9 @@
+env/
+models/Qwen3.6-27B/
+models/checkpoints/
+data/raw/
+data/processed/
+data/synthetic/
+*.egg-info/
+__pycache__/
+
