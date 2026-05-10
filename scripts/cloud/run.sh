@@ -37,17 +37,33 @@ pip install -r scripts/cloud/requirements.txt -q
 
 # Best-effort: fast kernels for Qwen3.6's Gated DeltaNet layers (3 of every
 # 4 layers). Without these, training falls back to a PyTorch implementation
-# that is significantly slower. Install failure is NON-FATAL — causal-conv1d
-# compiles against CUDA at install time and can fail on minimal images.
+# that pegs CPU at 100% and idles the GPU at ~11% — first step ~190s, run
+# ETA ~36 hours. With them, ~5-30s/step.
+#
+# causal-conv1d has no prebuilt wheel for torch 2.10+cu128, so it must
+# build from source. The runpod/pytorch:*-devel image has CUDA 12.4 nvcc
+# at /usr/local/cuda-12.4/bin but doesn't put it on PATH — export it
+# before the install. The CUDA 12.4 nvcc vs torch 12.8 CUDA libs minor-
+# version mismatch is tolerated. See TROUBLESHOOTING.md §1.
 echo "  -- optional: fast DeltaNet kernels (best-effort, ~5-10 min if they build) --"
+if [[ -x /usr/local/cuda-12.4/bin/nvcc ]]; then
+    export PATH=/usr/local/cuda-12.4/bin:$PATH
+    export CUDA_HOME=/usr/local/cuda-12.4
+elif [[ -x /usr/local/cuda/bin/nvcc ]]; then
+    export PATH=/usr/local/cuda/bin:$PATH
+    export CUDA_HOME=/usr/local/cuda
+fi
+export TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST:-8.0}"   # A100=8.0 H100=9.0
+export MAX_JOBS="${MAX_JOBS:-4}"
+
 python -c "import fla" 2>/dev/null \
     && echo "  flash-linear-attention already installed" \
     || pip install flash-linear-attention 2>&1 | tail -3 \
     || warn "flash-linear-attention install failed; DeltaNet uses slow PyTorch fallback."
-python -c "import causal_conv1d" 2>/dev/null \
-    && echo "  causal-conv1d already installed" \
-    || pip install causal-conv1d 2>&1 | tail -3 \
-    || warn "causal-conv1d install failed; FLA may still hit slow conv path."
+python -c "from causal_conv1d import causal_conv1d_fn" 2>/dev/null \
+    && echo "  causal-conv1d already installed (fast kernel imports cleanly)" \
+    || pip install --no-build-isolation --no-cache-dir causal-conv1d 2>&1 | tail -3 \
+    || warn "causal-conv1d install failed (likely no nvcc on PATH); see TROUBLESHOOTING.md §1."
 
 step "2/5  Verifying HuggingFace access"
 if [[ -z "${HF_TOKEN:-}" ]]; then
