@@ -167,18 +167,23 @@ echo "  ssh ready."
 # at PID 1, but RunPod's default sshd doesn't expose them to login shells.
 # Pipe the script over stdin so we can `export` the secrets explicitly in the
 # remote shell — also avoids the SSH-arg-quoting trap that breaks `bash -lc`.
+# Build env-export block; skip vars whose local value is empty/unset, so the
+# remote shell doesn't see e.g. `export MAX_SEQ_LENGTH=''` (which then takes
+# precedence over Python-side defaults).
+ENV_EXPORTS="export HF_TOKEN='$HF_TOKEN'"
+for var in HF_REPO WANDB_API_KEY BASE_MODEL DATASET MAX_SEQ_LENGTH; do
+    val="${!var:-}"
+    [[ -n "$val" ]] && ENV_EXPORTS="$ENV_EXPORTS
+export $var='$val'"
+done
+
 step "Running training pipeline on pod"
 ssh -i "$SSH_KEY" \
     -o IdentitiesOnly=yes \
     -o StrictHostKeyChecking=accept-new \
     -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" bash -ls <<EOF
 set -e
-export HF_TOKEN='$HF_TOKEN'
-export HF_REPO='${HF_REPO:-}'
-export WANDB_API_KEY='${WANDB_API_KEY:-}'
-export BASE_MODEL='${BASE_MODEL:-}'
-export DATASET='${DATASET:-}'
-export MAX_SEQ_LENGTH='${MAX_SEQ_LENGTH:-}'
+$ENV_EXPORTS
 mkdir -p /workspace
 cd /workspace
 if [[ ! -d cl-macro-llm ]]; then

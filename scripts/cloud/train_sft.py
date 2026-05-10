@@ -22,10 +22,20 @@ from unsloth import FastLanguageModel
 from trl import SFTConfig, SFTTrainer
 
 
-MODEL_NAME = os.environ.get("BASE_MODEL", "Qwen/Qwen3.6-27B")
-OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "./output")
-DATASET_NAME = os.environ.get("DATASET", "j14i/cl-macros-thinking")
-MAX_SEQ_LENGTH = int(os.environ.get("MAX_SEQ_LENGTH", "4096"))
+def _env(name: str, default: str) -> str:
+    """os.environ.get but treats empty string the same as unset.
+
+    The launcher exports optional overrides as `KEY=''` for any var that
+    isn't set locally, so plain `os.environ.get(name, default)` would
+    return the empty string and skip the default.
+    """
+    return os.environ.get(name) or default
+
+
+MODEL_NAME = _env("BASE_MODEL", "Qwen/Qwen3.6-27B")
+OUTPUT_DIR = _env("OUTPUT_DIR", "./output")
+DATASET_NAME = _env("DATASET", "j14i/cl-macros-thinking")
+MAX_SEQ_LENGTH = int(_env("MAX_SEQ_LENGTH", "4096"))
 FINAL_ADAPTER_DIR = Path(OUTPUT_DIR) / "final_adapter"
 
 
