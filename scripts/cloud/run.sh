@@ -35,6 +35,20 @@ python -c "import unsloth" 2>/dev/null \
     || pip install --upgrade --force-reinstall --no-cache-dir unsloth unsloth_zoo
 pip install -r scripts/cloud/requirements.txt -q
 
+# Best-effort: fast kernels for Qwen3.6's Gated DeltaNet layers (3 of every
+# 4 layers). Without these, training falls back to a PyTorch implementation
+# that is significantly slower. Install failure is NON-FATAL — causal-conv1d
+# compiles against CUDA at install time and can fail on minimal images.
+echo "  -- optional: fast DeltaNet kernels (best-effort, ~5-10 min if they build) --"
+python -c "import fla" 2>/dev/null \
+    && echo "  flash-linear-attention already installed" \
+    || pip install flash-linear-attention 2>&1 | tail -3 \
+    || warn "flash-linear-attention install failed; DeltaNet uses slow PyTorch fallback."
+python -c "import causal_conv1d" 2>/dev/null \
+    && echo "  causal-conv1d already installed" \
+    || pip install causal-conv1d 2>&1 | tail -3 \
+    || warn "causal-conv1d install failed; FLA may still hit slow conv path."
+
 step "2/5  Verifying HuggingFace access"
 if [[ -z "${HF_TOKEN:-}" ]]; then
     fail "HF_TOKEN is not set — export it before running (needed for adapter upload + private repos)."
