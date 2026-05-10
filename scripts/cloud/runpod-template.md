@@ -12,6 +12,23 @@ summary. The training data is downloaded directly from
 `j14i/cl-macros-thinking` (chat-format with `<think>` reasoning traces) —
 no scp of local JSONL needed.
 
+## Fast path: scripted launch
+
+If you have `runpodctl` and `jq` installed and a populated `.env` (see
+`.env.example`):
+
+```bash
+bash scripts/cloud/launch.sh
+```
+
+This boots an A100 80GB pod, verifies you're authenticated as
+`RUNPOD_EXPECTED_EMAIL` (so you can't ship work to a company account by
+accident), clones the repo on the pod, runs `bash scripts/cloud/run.sh`,
+and tears the pod down on exit (`KEEP_POD=1` to keep it alive). Refuses to
+boot if `HF_REPO` is unset — without it the adapter dies with the pod.
+
+The rest of this doc covers the manual / dashboard flow.
+
 ## 1. Provision the pod
 
 - Cloud: RunPod → Deploy → **A100 80GB** (Secure Cloud or Community Cloud).

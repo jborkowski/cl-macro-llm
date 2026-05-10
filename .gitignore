@@ -1,4 +1,7 @@
 env/
+.env
+.env.local
+.env.*.local
 models/Qwen3.6-27B/
 models/checkpoints/
 data/raw/
