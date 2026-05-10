@@ -55,19 +55,39 @@ def to_messages(example: dict) -> dict:
 
 
 def _maybe_init_wandb() -> bool:
-    """Try to log in to Weights & Biases. Returns True if available so
-    SFTConfig can opt into `report_to=["wandb"]`. Never raises — a stale
-    or rate-limited API key shouldn't crash a 2-hour training run.
+    """Try to log in to Weights & Biases and confirm an entity exists.
+    Returns True only when SFTConfig can safely set report_to=["wandb"].
+
+    Login alone is not enough: HF Trainer's wandb callback later calls
+    wandb.init() which raises `entity not specified, and viewer has no
+    default entity` for accounts that have never set up a team or default
+    username. Pre-check the viewer's entity here and disable wandb
+    gracefully if it's missing — training shouldn't die for telemetry.
+    Override by exporting WANDB_ENTITY=<team-or-username>.
     """
     if not os.environ.get("WANDB_API_KEY"):
         return False
     try:
         import wandb
         wandb.login(key=os.environ["WANDB_API_KEY"], anonymous="never", relogin=True)
-        return True
     except Exception as e:
         print(f"wandb login failed ({type(e).__name__}: {e}); training without W&B reporting.")
         return False
+    if os.environ.get("WANDB_ENTITY"):
+        return True
+    try:
+        viewer = wandb.Api().viewer
+        entity = getattr(viewer, "entity", None) or getattr(viewer, "username", None)
+    except Exception:
+        entity = None
+    if not entity:
+        print(
+            "wandb account has no default entity; set WANDB_ENTITY in .env "
+            "(e.g. your wandb username or team). Skipping W&B for this run."
+        )
+        return False
+    os.environ.setdefault("WANDB_ENTITY", entity)
+    return True
 
 
 def main() -> None:
@@ -143,6 +163,12 @@ def main() -> None:
         f"{len(raw['train'])} train / {len(raw['validation'])} validation"
     )
 
+    # warmup_ratio is deprecated in trl 5.2; compute equivalent warmup_steps.
+    # 5% of total optimizer steps (effective batch 8, 3 epochs, ~1828 rows).
+    _effective_batch = 1 * 8
+    _total_steps = (len(raw["train"]) // _effective_batch + 1) * 3
+    _warmup_steps = max(10, int(_total_steps * 0.05))
+
     sft_config = SFTConfig(
         output_dir=OUTPUT_DIR,
         num_train_epochs=3,
@@ -151,7 +177,7 @@ def main() -> None:
         gradient_accumulation_steps=8,
         learning_rate=2e-5,
         lr_scheduler_type="cosine",
-        warmup_ratio=0.05,
+        warmup_steps=_warmup_steps,
         bf16=True,
         optim="adamw_8bit",
         logging_steps=10,
