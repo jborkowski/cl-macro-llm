@@ -70,9 +70,9 @@ fi
 
 # ── 5. Boot pod ─────────────────────────────────────────────────────
 POD_NAME="cl-macro-sft-$(date +%s)"
-IMAGE="${RUNPOD_IMAGE:-runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04}"
+TEMPLATE_ID="${RUNPOD_TEMPLATE_ID:-pzr9tt3vvq}"     # official Unsloth template (unsloth/unsloth:latest)
 GPU_ID="${RUNPOD_GPU_ID:-NVIDIA A100 80GB PCIe}"
-DISK_GB="${RUNPOD_DISK_GB:-100}"
+DISK_GB="${RUNPOD_DISK_GB:-100}"                    # override template's 50 GB default — Qwen3.6-27B weights alone are 54 GB
 CLOUD_TYPE="${RUNPOD_CLOUD_TYPE:-COMMUNITY}"
 
 # Build the env JSON object — modern `runpodctl pod create --env` expects
@@ -91,11 +91,11 @@ ENV_JSON=$(jq -n \
      + (if $DATASET     != "" then {DATASET: $DATASET} else {} end)
      + (if $MAX_SEQ     != "" then {MAX_SEQ_LENGTH: $MAX_SEQ} else {} end)')
 
-step "Booting pod: $POD_NAME ($GPU_ID, $DISK_GB GB disk, $CLOUD_TYPE cloud)"
+step "Booting pod: $POD_NAME (template $TEMPLATE_ID, $GPU_ID, $DISK_GB GB disk, $CLOUD_TYPE cloud)"
 
 CREATE_ARGS=(
     --name "$POD_NAME"
-    --image "$IMAGE"
+    --template-id "$TEMPLATE_ID"
     --gpu-id "$GPU_ID"
     --gpu-count 1
     --container-disk-in-gb "$DISK_GB"

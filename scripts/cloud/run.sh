@@ -26,8 +26,13 @@ step() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m!! %s\033[0m\n' "$*" >&2; }
 fail() { printf '\033[1;31mxx %s\033[0m\n' "$*" >&2; exit 1; }
 
-step "1/5  Installing python requirements (Unsloth + deps)"
-pip install --upgrade --force-reinstall --no-cache-dir unsloth unsloth_zoo
+step "1/5  Installing python requirements (Unsloth from image; pip-installing direct deps)"
+# When launched via the official Unsloth template (pzr9tt3vvq), unsloth +
+# unsloth_zoo + a verified torch/CUDA combo are baked into the image — we
+# skip the --force-reinstall to avoid breaking that. Direct deps still need pip.
+python -c "import unsloth" 2>/dev/null \
+    && echo "  unsloth already installed: $(python -c 'import unsloth; print(unsloth.__version__)')" \
+    || pip install --upgrade --force-reinstall --no-cache-dir unsloth unsloth_zoo
 pip install -r scripts/cloud/requirements.txt -q
 
 step "2/5  Verifying HuggingFace access"
