@@ -70,9 +70,15 @@ fi
 
 # ── 5. Boot pod ─────────────────────────────────────────────────────
 POD_NAME="cl-macro-sft-$(date +%s)"
-TEMPLATE_ID="${RUNPOD_TEMPLATE_ID:-pzr9tt3vvq}"     # official Unsloth template (unsloth/unsloth:latest)
+# Default to a small pytorch image (~5 GB, fast pull on community cloud).
+# The official Unsloth template (pzr9tt3vvq, unsloth/unsloth:latest) avoids
+# the pip --force-reinstall risk but is 13+ GB and takes 30-50 min to
+# extract on cold community-cloud hosts. Override via env if you want it:
+#     RUNPOD_TEMPLATE_ID=pzr9tt3vvq bash scripts/cloud/launch.sh
+TEMPLATE_ID="${RUNPOD_TEMPLATE_ID:-}"
+IMAGE="${RUNPOD_IMAGE:-runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04}"
 GPU_ID="${RUNPOD_GPU_ID:-NVIDIA A100 80GB PCIe}"
-DISK_GB="${RUNPOD_DISK_GB:-100}"                    # override template's 50 GB default — Qwen3.6-27B weights alone are 54 GB
+DISK_GB="${RUNPOD_DISK_GB:-100}"
 CLOUD_TYPE="${RUNPOD_CLOUD_TYPE:-COMMUNITY}"
 
 # Build the env JSON object — modern `runpodctl pod create --env` expects
@@ -91,11 +97,17 @@ ENV_JSON=$(jq -n \
      + (if $DATASET     != "" then {DATASET: $DATASET} else {} end)
      + (if $MAX_SEQ     != "" then {MAX_SEQ_LENGTH: $MAX_SEQ} else {} end)')
 
-step "Booting pod: $POD_NAME (template $TEMPLATE_ID, $GPU_ID, $DISK_GB GB disk, $CLOUD_TYPE cloud)"
+if [[ -n "$TEMPLATE_ID" ]]; then
+    step "Booting pod: $POD_NAME (template $TEMPLATE_ID, $GPU_ID, $DISK_GB GB disk, $CLOUD_TYPE cloud)"
+    IMAGE_FLAG=(--template-id "$TEMPLATE_ID")
+else
+    step "Booting pod: $POD_NAME (image $IMAGE, $GPU_ID, $DISK_GB GB disk, $CLOUD_TYPE cloud)"
+    IMAGE_FLAG=(--image "$IMAGE")
+fi
 
 CREATE_ARGS=(
     --name "$POD_NAME"
-    --template-id "$TEMPLATE_ID"
+    "${IMAGE_FLAG[@]}"
     --gpu-id "$GPU_ID"
     --gpu-count 1
     --container-disk-in-gb "$DISK_GB"
