@@ -54,7 +54,25 @@ def to_messages(example: dict) -> dict:
     }
 
 
+def _maybe_init_wandb() -> bool:
+    """Try to log in to Weights & Biases. Returns True if available so
+    SFTConfig can opt into `report_to=["wandb"]`. Never raises — a stale
+    or rate-limited API key shouldn't crash a 2-hour training run.
+    """
+    if not os.environ.get("WANDB_API_KEY"):
+        return False
+    try:
+        import wandb
+        wandb.login(key=os.environ["WANDB_API_KEY"], anonymous="never", relogin=True)
+        return True
+    except Exception as e:
+        print(f"wandb login failed ({type(e).__name__}: {e}); training without W&B reporting.")
+        return False
+
+
 def main() -> None:
+    wandb_ok = _maybe_init_wandb()
+
     # load_in_16bit=True → native bf16; QLoRA (load_in_4bit) is explicitly
     # discouraged by Unsloth for Qwen3.5/3.6 models.
     model, tokenizer = FastLanguageModel.from_pretrained(
@@ -148,7 +166,7 @@ def main() -> None:
         max_seq_length=MAX_SEQ_LENGTH,
         packing=False,
         seed=42,
-        report_to=["wandb"] if os.environ.get("WANDB_API_KEY") else "none",
+        report_to=["wandb"] if wandb_ok else "none",
     )
 
     def formatting_func(examples: dict) -> list:
