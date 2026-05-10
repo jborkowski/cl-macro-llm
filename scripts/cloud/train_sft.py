@@ -21,7 +21,7 @@ from trl import SFTConfig, SFTTrainer
 
 MODEL_NAME = os.environ.get("BASE_MODEL", "Qwen/Qwen3.6-27B")
 OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "./output")
-DATASET_NAME = os.environ.get("DATASET", "j14i/cl-macros")
+DATASET_NAME = os.environ.get("DATASET", "j14i/cl-macros-thinking")
 FINAL_ADAPTER_DIR = Path(OUTPUT_DIR) / "final_adapter"
 
 

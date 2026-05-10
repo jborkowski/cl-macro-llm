@@ -14,7 +14,7 @@ set -euo pipefail
 
 OUTPUT_DIR="${OUTPUT_DIR:-./output}"
 BASE_MODEL="${BASE_MODEL:-Qwen/Qwen3.6-27B}"
-DATASET="${DATASET:-j14i/cl-macros}"
+DATASET="${DATASET:-j14i/cl-macros-thinking}"
 SMOKE_PROMPT="${SMOKE_PROMPT:-Write a Common Lisp macro \`when-let\` that binds the result of an expression to a name and runs a body only when the value is non-nil.}"
 
 step() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
