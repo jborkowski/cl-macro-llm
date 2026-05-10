@@ -45,7 +45,7 @@ except Exception as e:
 PY
 
 step "3/5  Training (LoRA SFT, full bf16)"
-accelerate launch scripts/cloud/train_sft.py
+accelerate launch --num_processes 1 --mixed_precision bf16 scripts/cloud/train_sft.py
 
 ADAPTER_DIR="${OUTPUT_DIR}/final_adapter"
 [[ -d "$ADAPTER_DIR" ]] || fail "Training finished but $ADAPTER_DIR is missing."
