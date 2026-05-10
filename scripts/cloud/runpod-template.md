@@ -21,12 +21,25 @@ Either:
 Pick one:
 
 ```bash
-# (a) clone from your remote
-git clone <your-repo-url> cl-macro-llm
+# (a) clone from GitHub (HTTPS — no key needed on the pod)
+git clone https://github.com/jborkowski/cl-macro-llm.git
 cd cl-macro-llm
 
-# (b) or scp from your laptop
+# (b) or, if you've added the pod's SSH key to GitHub:
+#   git clone git@github.com:jborkowski/cl-macro-llm.git
+#   cd cl-macro-llm
+
+# (c) or scp the working tree from your laptop:
 #   scp -P <port> -r cl-macro-llm root@<pod-ip>:/workspace/
+```
+
+Note: the JSONL training data lives under `data/processed/full/` and is
+expected to be present in the repo. If it's gitignored, scp it in
+separately:
+
+```bash
+scp -P <port> data/processed/full/*.jsonl \
+    root@<pod-ip>:/workspace/cl-macro-llm/data/processed/full/
 ```
 
 Make sure these files are present on the pod:
@@ -54,7 +67,8 @@ the final LoRA adapter in `./output/final_adapter/`.
 
 ```bash
 # from your laptop
-scp -P <port> -r root@<pod-ip>:/workspace/cl-macro-llm/output/final_adapter ./
+scp -P <port> -r \
+    root@<pod-ip>:/workspace/cl-macro-llm/output/final_adapter ./
 ```
 
 The adapter is small (a few hundred MB); the 4-bit base stays on the pod.
