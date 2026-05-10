@@ -9,11 +9,7 @@ import sys
 
 import torch
 from peft import PeftModel
-from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    BitsAndBytesConfig,
-)
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 SYSTEM_PROMPT = (
@@ -59,20 +55,12 @@ def main() -> None:
         print("No prompt provided.", file=sys.stderr)
         sys.exit(2)
 
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.bfloat16,
-        bnb_4bit_use_double_quant=True,
-    )
-
     tokenizer = AutoTokenizer.from_pretrained(args.adapter, use_fast=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
     base = AutoModelForCausalLM.from_pretrained(
         args.base_model,
-        quantization_config=bnb_config,
         device_map="auto",
         torch_dtype=torch.bfloat16,
         trust_remote_code=True,

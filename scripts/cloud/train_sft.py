@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""SFT LoRA fine-tuning of Qwen3.6-27B on Common Lisp macro traces.
+"""SFT LoRA fine-tuning of Qwen3.6-27B on the j14i/cl-macros dataset.
 
-Loads the base model in 4-bit (NF4 + bf16 compute), attaches a rank-32 LoRA
-adapter to all attention/MLP projections, and trains with TRL's SFTTrainer
-on the chat-format JSONL produced by scripts/prepare_data_full.py.
+Loads the base model in native bf16 (no quantization — targeted at A100 80GB),
+attaches a rank-32 LoRA adapter to all attention/MLP projections, and trains
+with TRL's SFTTrainer on chat-format messages produced from the public
+HuggingFace dataset `j14i/cl-macros`.
 """
 
 from __future__ import annotations
@@ -14,38 +15,38 @@ from pathlib import Path
 import torch
 from datasets import load_dataset
 from peft import LoraConfig, get_peft_model
-from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    BitsAndBytesConfig,
-)
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl import SFTConfig, SFTTrainer
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-TRAIN_FILE = PROJECT_ROOT / "data" / "processed" / "full" / "train.jsonl"
-VALID_FILE = PROJECT_ROOT / "data" / "processed" / "full" / "valid.jsonl"
-
 MODEL_NAME = os.environ.get("BASE_MODEL", "Qwen/Qwen3.6-27B")
 OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "./output")
+DATASET_NAME = os.environ.get("DATASET", "j14i/cl-macros")
 FINAL_ADAPTER_DIR = Path(OUTPUT_DIR) / "final_adapter"
 
 
-def main() -> None:
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.bfloat16,
-        bnb_4bit_use_double_quant=True,
-    )
+def to_messages(example: dict) -> dict:
+    """Convert a {instruction, input, output, ...} row into chat messages.
 
+    The `instruction` text already embeds the macro call form, so we don't
+    duplicate `input`. `output` is the defmacro definition we want the model
+    to learn to produce.
+    """
+    return {
+        "messages": [
+            {"role": "user", "content": example["instruction"]},
+            {"role": "assistant", "content": example["output"]},
+        ]
+    }
+
+
+def main() -> None:
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_fast=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_NAME,
-        quantization_config=bnb_config,
         device_map="auto",
         torch_dtype=torch.bfloat16,
         trust_remote_code=True,
@@ -85,12 +86,31 @@ def main() -> None:
         f"({100 * trainable / total:.4f}%)"
     )
 
-    dataset = load_dataset(
-        "json",
-        data_files={
-            "train": str(TRAIN_FILE),
-            "validation": str(VALID_FILE),
-        },
+    raw = load_dataset(DATASET_NAME, token=os.environ.get("HF_TOKEN"))
+    if "validation" not in raw:
+        if "test" in raw:
+            raw["validation"] = raw["test"]
+        else:
+            split = raw["train"].train_test_split(test_size=0.1, seed=42)
+            raw = {"train": split["train"], "validation": split["test"]}
+
+    train_cols = raw["train"].column_names
+    if "messages" not in train_cols:
+        required = {"instruction", "output"}
+        missing = required - set(train_cols)
+        if missing:
+            raise RuntimeError(
+                f"Dataset {DATASET_NAME!r} has columns {train_cols} — "
+                f"expected either a 'messages' field or {sorted(required)}."
+            )
+        raw["train"] = raw["train"].map(to_messages, remove_columns=train_cols)
+        raw["validation"] = raw["validation"].map(
+            to_messages, remove_columns=raw["validation"].column_names
+        )
+
+    print(
+        f"Loaded {DATASET_NAME}: "
+        f"{len(raw['train'])} train / {len(raw['validation'])} validation"
     )
 
     sft_config = SFTConfig(
@@ -123,8 +143,8 @@ def main() -> None:
     trainer = SFTTrainer(
         model=model,
         args=sft_config,
-        train_dataset=dataset["train"],
-        eval_dataset=dataset["validation"],
+        train_dataset=raw["train"],
+        eval_dataset=raw["validation"],
         processing_class=tokenizer,
     )
 
