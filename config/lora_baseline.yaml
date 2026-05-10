@@ -1,0 +1,39 @@
+# mlx-lm 0.31.3 LoRA fine-tune config — baseline (no real thinking traces yet
+# applied to the *_full files; this is just the dataset-with-traces produced by
+# generate_thinking_traces_full.py).
+#
+# Iter math: 1828 train rows / batch_size 4 = 457 iter/epoch.
+# 3 epochs ≈ 1371 iters (rounded up to 1400 for a clean eval boundary).
+#
+# scale = alpha / rank.  User asked rank=64 / alpha=128 → scale = 2.0.
+
+model: models/Qwen3.6-27B
+train: true
+data: data/processed/full
+
+fine_tune_type: lora
+optimizer: adamw
+
+num_layers: 8
+
+batch_size: 1
+iters: 1500
+learning_rate: 1.0e-5
+max_seq_length: 2048
+grad_checkpoint: true
+grad_accumulation_steps: 4
+clear_cache_threshold: 1
+mask_prompt: true
+seed: 42
+
+# Reporting / checkpointing
+steps_per_report: 10
+steps_per_eval: 100
+val_batches: 25
+save_every: 100
+adapter_path: models/checkpoints/baseline-no-traces
+
+lora_parameters:
+  rank: 64
+  scale: 2.0                      # = alpha (128) / rank (64)
+  dropout: 0.05
