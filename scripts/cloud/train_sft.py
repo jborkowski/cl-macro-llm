@@ -152,18 +152,21 @@ def main() -> None:
     )
 
     def formatting_func(examples: dict) -> list:
-        """Render chat-format rows as concatenated token sequences. Unsloth's
-        SFTTrainer wrapper calls this on a *batch* (dict-of-lists) and
-        expects a list of strings back — single-example/single-string
-        signatures fail with `should return a list of processed strings`.
+        """Render chat-format rows. Unsloth probes this twice with different
+        shapes: first with a single example (`messages` is one conversation
+        — a list of role/content dicts), then later with a batch (`messages`
+        is a list of conversations). Return a list in both cases.
         """
+        msgs = examples["messages"]
+        if msgs and isinstance(msgs[0], dict):
+            return [tokenizer.apply_chat_template(
+                msgs, tokenize=False, add_generation_prompt=False,
+            )]
         return [
             tokenizer.apply_chat_template(
-                messages,
-                tokenize=False,
-                add_generation_prompt=False,
+                m, tokenize=False, add_generation_prompt=False,
             )
-            for messages in examples["messages"]
+            for m in msgs
         ]
 
     trainer = SFTTrainer(
