@@ -151,17 +151,20 @@ def main() -> None:
         report_to=["wandb"] if os.environ.get("WANDB_API_KEY") else "none",
     )
 
-    def formatting_func(example: dict) -> str:
-        """Render a chat-format row as the concatenated token sequence the
-        model is trained on. Unsloth's SFTTrainer requires this explicit
-        callback for messages-format datasets; without it the loader has
-        no way to invoke the chat template and crashes at trainer init.
+    def formatting_func(examples: dict) -> list:
+        """Render chat-format rows as concatenated token sequences. Unsloth's
+        SFTTrainer wrapper calls this on a *batch* (dict-of-lists) and
+        expects a list of strings back — single-example/single-string
+        signatures fail with `should return a list of processed strings`.
         """
-        return tokenizer.apply_chat_template(
-            example["messages"],
-            tokenize=False,
-            add_generation_prompt=False,
-        )
+        return [
+            tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=False,
+            )
+            for messages in examples["messages"]
+        ]
 
     trainer = SFTTrainer(
         model=model,
