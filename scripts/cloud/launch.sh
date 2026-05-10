@@ -3,24 +3,24 @@
 # tear the pod down on exit.
 #
 # Prerequisites:
-#   - `runpodctl` installed locally (https://github.com/runpod/runpodctl)
-#   - `jq` installed locally
-#   - `.env` in the repo root (copy from `.env.example`) with:
-#       RUNPOD_API_KEY, RUNPOD_EXPECTED_EMAIL, HF_TOKEN, HF_REPO
+#   - `runpodctl` 2.x (modern `runpodctl pod ...` syntax)
+#   - `jq`, `ssh`, `curl` installed locally
+#   - SSH key registered with RunPod (auto-managed key in
+#     ~/.runpod/ssh/RunPod-Key-Go is used by default)
+#   - `.env` in the repo root (copy from `.env.example`)
 #
 # Safeties:
-#   1. Authenticates runpodctl with $RUNPOD_API_KEY, then queries the
-#      RunPod GraphQL API to confirm the authenticated user's email
-#      matches $RUNPOD_EXPECTED_EMAIL — refuses to continue otherwise.
-#      Protects against booting on a company account by mistake.
+#   1. Confirms authenticated user's email matches $RUNPOD_EXPECTED_EMAIL
+#      before booting — protects against shipping work to a company account.
 #   2. Refuses to boot if $HF_REPO is unset AND $KEEP_POD is unset —
 #      otherwise the adapter dies with the pod.
-#   3. Trap on EXIT removes the pod unless $KEEP_POD=1.
+#   3. EXIT trap deletes the pod unless $KEEP_POD=1.
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 ENV_FILE="${ENV_FILE:-$REPO_ROOT/.env}"
+SSH_KEY="${RUNPOD_SSH_KEY:-$HOME/.runpod/ssh/RunPod-Key-Go}"
 
 step() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m!! %s\033[0m\n' "$*" >&2; }
@@ -38,14 +38,18 @@ set +a
 : "${RUNPOD_EXPECTED_EMAIL:?RUNPOD_EXPECTED_EMAIL missing from $ENV_FILE}"
 : "${HF_TOKEN:?HF_TOKEN missing from $ENV_FILE}"
 
+# runpodctl reads RUNPOD_API_KEY from env, no separate config step needed
+export RUNPOD_API_KEY
+
 # ── 2. Tool checks ──────────────────────────────────────────────────
-command -v runpodctl >/dev/null || fail "runpodctl not installed. brew install runpodctl, or see https://github.com/runpod/runpodctl"
+command -v runpodctl >/dev/null || fail "runpodctl not installed."
 command -v jq        >/dev/null || fail "jq not installed."
+command -v ssh       >/dev/null || fail "ssh not installed."
+command -v curl      >/dev/null || fail "curl not installed."
+[[ -f "$SSH_KEY" ]]              || fail "SSH private key not found at $SSH_KEY (set RUNPOD_SSH_KEY to override)."
 
 # ── 3. Verify RunPod account ────────────────────────────────────────
 step "Verifying RunPod account"
-runpodctl config --apiKey "$RUNPOD_API_KEY" >/dev/null
-
 CURRENT_EMAIL=$(curl -fsS \
     -H "Authorization: Bearer $RUNPOD_API_KEY" \
     -H "Content-Type: application/json" \
@@ -53,9 +57,7 @@ CURRENT_EMAIL=$(curl -fsS \
     https://api.runpod.io/graphql \
     | jq -r '.data.myself.email // empty')
 
-if [[ -z "$CURRENT_EMAIL" ]]; then
-    fail "Could not resolve current RunPod user. Bad API key?"
-fi
+[[ -n "$CURRENT_EMAIL" ]] || fail "Could not resolve current RunPod user. Bad API key?"
 if [[ "$CURRENT_EMAIL" != "$RUNPOD_EXPECTED_EMAIL" ]]; then
     fail "Account mismatch — expected $RUNPOD_EXPECTED_EMAIL, got $CURRENT_EMAIL. Refusing to boot."
 fi
@@ -63,69 +65,129 @@ echo "  authenticated as: $CURRENT_EMAIL"
 
 # ── 4. Adapter-survival precondition ────────────────────────────────
 if [[ -z "${HF_REPO:-}" && -z "${KEEP_POD:-}" ]]; then
-    fail "HF_REPO is unset AND KEEP_POD is unset — adapter would be destroyed with the pod. Set HF_REPO in .env, or export KEEP_POD=1 to keep the pod alive after training."
+    fail "HF_REPO is unset AND KEEP_POD is unset — adapter would be destroyed with the pod. Set HF_REPO in .env, or export KEEP_POD=1 to keep the pod alive."
 fi
 
 # ── 5. Boot pod ─────────────────────────────────────────────────────
 POD_NAME="cl-macro-sft-$(date +%s)"
 IMAGE="${RUNPOD_IMAGE:-runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04}"
-GPU_TYPE="${RUNPOD_GPU_TYPE:-NVIDIA A100 80GB PCIe}"
+GPU_ID="${RUNPOD_GPU_ID:-NVIDIA A100 80GB PCIe}"
 DISK_GB="${RUNPOD_DISK_GB:-100}"
+CLOUD_TYPE="${RUNPOD_CLOUD_TYPE:-COMMUNITY}"
 
-step "Booting pod: $POD_NAME ($GPU_TYPE, $DISK_GB GB disk, image: $IMAGE)"
+# Build the env JSON object — modern `runpodctl pod create --env` expects
+# a single JSON object, not repeated --env KEY=VAL flags.
+ENV_JSON=$(jq -n \
+    --arg HF_TOKEN     "$HF_TOKEN" \
+    --arg HF_REPO      "${HF_REPO:-}" \
+    --arg WANDB        "${WANDB_API_KEY:-}" \
+    --arg BASE_MODEL   "${BASE_MODEL:-}" \
+    --arg DATASET      "${DATASET:-}" \
+    --arg MAX_SEQ      "${MAX_SEQ_LENGTH:-}" \
+    '{HF_TOKEN: $HF_TOKEN}
+     + (if $HF_REPO     != "" then {HF_REPO: $HF_REPO} else {} end)
+     + (if $WANDB       != "" then {WANDB_API_KEY: $WANDB} else {} end)
+     + (if $BASE_MODEL  != "" then {BASE_MODEL: $BASE_MODEL} else {} end)
+     + (if $DATASET     != "" then {DATASET: $DATASET} else {} end)
+     + (if $MAX_SEQ     != "" then {MAX_SEQ_LENGTH: $MAX_SEQ} else {} end)')
 
-POD_ENV_ARGS=(--env "HF_TOKEN=$HF_TOKEN")
-[[ -n "${HF_REPO:-}"         ]] && POD_ENV_ARGS+=(--env "HF_REPO=$HF_REPO")
-[[ -n "${WANDB_API_KEY:-}"   ]] && POD_ENV_ARGS+=(--env "WANDB_API_KEY=$WANDB_API_KEY")
-[[ -n "${BASE_MODEL:-}"      ]] && POD_ENV_ARGS+=(--env "BASE_MODEL=$BASE_MODEL")
-[[ -n "${DATASET:-}"         ]] && POD_ENV_ARGS+=(--env "DATASET=$DATASET")
-[[ -n "${MAX_SEQ_LENGTH:-}"  ]] && POD_ENV_ARGS+=(--env "MAX_SEQ_LENGTH=$MAX_SEQ_LENGTH")
+step "Booting pod: $POD_NAME ($GPU_ID, $DISK_GB GB disk, $CLOUD_TYPE cloud)"
 
-POD_JSON=$(runpodctl create pod \
-    --name "$POD_NAME" \
-    --imageName "$IMAGE" \
-    --gpuType "$GPU_TYPE" \
-    --gpuCount 1 \
-    --containerDiskSize "$DISK_GB" \
-    --ports "22/tcp" \
-    "${POD_ENV_ARGS[@]}" \
-    --json)
+CREATE_ARGS=(
+    --name "$POD_NAME"
+    --image "$IMAGE"
+    --gpu-id "$GPU_ID"
+    --gpu-count 1
+    --container-disk-in-gb "$DISK_GB"
+    --ports "22/tcp"
+    --cloud-type "$CLOUD_TYPE"
+    --env "$ENV_JSON"
+)
+# Community cloud SSH requires a public IP; secure cloud routes via proxy.
+[[ "$CLOUD_TYPE" == "COMMUNITY" ]] && CREATE_ARGS+=(--public-ip)
 
-POD_ID=$(echo "$POD_JSON" | jq -r '.id // empty')
-[[ -n "$POD_ID" ]] || fail "Could not parse pod id from runpodctl output:\n$POD_JSON"
+CREATE_OUT=$(runpodctl pod create "${CREATE_ARGS[@]}" 2>&1)
+POD_ID=$(echo "$CREATE_OUT" | jq -r '.id // empty' 2>/dev/null)
+if [[ -z "$POD_ID" ]]; then
+    # Fallback parsing for non-pure-JSON output
+    POD_ID=$(echo "$CREATE_OUT" | grep -oE '"id"[[:space:]]*:[[:space:]]*"[^"]+"' | head -1 | sed -E 's/.*"([^"]+)"$/\1/')
+fi
+[[ -n "$POD_ID" ]] || fail "Could not parse pod id from runpodctl output:\n$CREATE_OUT"
 echo "  pod id: $POD_ID"
 
 cleanup() {
     if [[ -n "${KEEP_POD:-}" ]]; then
-        warn "KEEP_POD set — pod $POD_ID left running. Remove later with: runpodctl remove pod $POD_ID"
+        warn "KEEP_POD set — pod $POD_ID left running. Remove later with: runpodctl pod delete $POD_ID"
     else
         step "Tearing down pod $POD_ID"
-        runpodctl remove pod "$POD_ID" || warn "Pod cleanup failed — remove manually: runpodctl remove pod $POD_ID"
+        runpodctl pod delete "$POD_ID" || warn "Pod cleanup failed — remove manually: runpodctl pod delete $POD_ID"
     fi
 }
-trap cleanup EXIT
+trap cleanup EXIT INT TERM HUP
 
-# ── 6. Wait for pod to come online ──────────────────────────────────
-step "Waiting for pod to become reachable (up to 5 min)"
+# ── 6. Wait for SSH details ─────────────────────────────────────────
+step "Waiting for pod SSH details (up to 5 min)"
 deadline=$(( $(date +%s) + 300 ))
-until runpodctl ssh "$POD_ID" -- "echo ready" >/dev/null 2>&1; do
-    [[ $(date +%s) -lt $deadline ]] || fail "Pod did not come online within 5 minutes."
+SSH_HOST=""
+SSH_PORT=""
+SSH_USER="root"
+while [[ -z "$SSH_HOST" || -z "$SSH_PORT" ]]; do
+    [[ $(date +%s) -lt $deadline ]] || fail "Pod did not expose SSH within 5 minutes."
+    sleep 8
+    INFO=$(runpodctl ssh info "$POD_ID" 2>/dev/null || echo "{}")
+    SSH_HOST=$(echo "$INFO" | jq -r '.ip // empty' 2>/dev/null)
+    SSH_PORT=$(echo "$INFO" | jq -r '.port // empty' 2>/dev/null)
+    if [[ -z "$SSH_HOST" || -z "$SSH_PORT" ]]; then
+        CMD=$(echo "$INFO" | jq -r '.ssh_command // empty' 2>/dev/null)
+        if [[ -n "$CMD" ]]; then
+            SSH_PORT=$(echo "$CMD" | grep -oE -- '-p [0-9]+' | awk '{print $2}')
+            SSH_HOST=$(echo "$CMD" | grep -oE '[a-z]+@[^ ]+' | tail -1 | cut -d@ -f2)
+            SSH_USER=$(echo "$CMD" | grep -oE '[a-z]+@[^ ]+' | tail -1 | cut -d@ -f1)
+        fi
+    fi
+done
+echo "  ssh: $SSH_USER@$SSH_HOST -p $SSH_PORT"
+
+# ── 7. Wait for sshd ────────────────────────────────────────────────
+step "Waiting for sshd to accept connections"
+deadline=$(( $(date +%s) + 180 ))
+until ssh -i "$SSH_KEY" \
+          -o IdentitiesOnly=yes \
+          -o StrictHostKeyChecking=accept-new \
+          -o ConnectTimeout=5 \
+          -o BatchMode=yes \
+          -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "echo ready" >/dev/null 2>&1; do
+    [[ $(date +%s) -lt $deadline ]] || fail "sshd did not respond within 3 minutes."
     sleep 5
 done
-echo "  pod reachable."
+echo "  ssh ready."
 
-# ── 7. Run pipeline on pod ──────────────────────────────────────────
+# ── 8. Run pipeline on pod ──────────────────────────────────────────
+# The container `--env` JSON we passed to `runpodctl pod create` sets env vars
+# at PID 1, but RunPod's default sshd doesn't expose them to login shells.
+# Pipe the script over stdin so we can `export` the secrets explicitly in the
+# remote shell — also avoids the SSH-arg-quoting trap that breaks `bash -lc`.
 step "Running training pipeline on pod"
-runpodctl ssh "$POD_ID" -- bash -lc "
-    set -e
-    cd /workspace
-    if [[ ! -d cl-macro-llm ]]; then
-        git clone https://github.com/jborkowski/cl-macro-llm.git
-    fi
-    cd cl-macro-llm
-    git pull --ff-only
-    bash scripts/cloud/run.sh
-"
+ssh -i "$SSH_KEY" \
+    -o IdentitiesOnly=yes \
+    -o StrictHostKeyChecking=accept-new \
+    -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" bash -ls <<EOF
+set -e
+export HF_TOKEN='$HF_TOKEN'
+export HF_REPO='${HF_REPO:-}'
+export WANDB_API_KEY='${WANDB_API_KEY:-}'
+export BASE_MODEL='${BASE_MODEL:-}'
+export DATASET='${DATASET:-}'
+export MAX_SEQ_LENGTH='${MAX_SEQ_LENGTH:-}'
+mkdir -p /workspace
+cd /workspace
+if [[ ! -d cl-macro-llm ]]; then
+    git clone https://github.com/jborkowski/cl-macro-llm.git
+fi
+cd cl-macro-llm
+git pull --ff-only || true
+bash scripts/cloud/run.sh
+EOF
 
 step "Done — training run finished."
 [[ -n "${HF_REPO:-}" ]] && echo "  adapter on HF: https://huggingface.co/$HF_REPO"
