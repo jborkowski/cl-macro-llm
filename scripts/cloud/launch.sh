@@ -183,7 +183,7 @@ echo "  ssh ready."
 # remote shell doesn't see e.g. `export MAX_SEQ_LENGTH=''` (which then takes
 # precedence over Python-side defaults).
 ENV_EXPORTS="export HF_TOKEN='$HF_TOKEN'"
-for var in HF_REPO WANDB_API_KEY WANDB_ENTITY BASE_MODEL DATASET MAX_SEQ_LENGTH; do
+for var in HF_REPO WANDB_API_KEY WANDB_ENTITY BASE_MODEL DATASET MAX_SEQ_LENGTH PHASE; do
     val="${!var:-}"
     [[ -n "$val" ]] && ENV_EXPORTS="$ENV_EXPORTS
 export $var='$val'"

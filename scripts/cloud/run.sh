@@ -22,6 +22,15 @@ BASE_MODEL="${BASE_MODEL:-Qwen/Qwen3.6-27B}"
 DATASET="${DATASET:-j14i/cl-macros-thinking}"
 SMOKE_PROMPT="${SMOKE_PROMPT:-Write a Common Lisp macro \`when-let\` that binds the result of an expression to a name and runs a body only when the value is non-nil.}"
 
+# PHASE selects which pipeline runs after dep install:
+#   sft  (default) — original Phase 1 SFT pipeline (steps 2-5 below)
+#   grpo           — exec into scripts/cloud/run_grpo.sh after step 1
+PHASE="${PHASE:-sft}"
+case "$PHASE" in
+    sft|grpo) ;;
+    *) echo "ERROR: PHASE must be 'sft' or 'grpo' (got: $PHASE)" >&2; exit 1 ;;
+esac
+
 step() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m!! %s\033[0m\n' "$*" >&2; }
 fail() { printf '\033[1;31mxx %s\033[0m\n' "$*" >&2; exit 1; }
@@ -64,6 +73,15 @@ python -c "from causal_conv1d import causal_conv1d_fn" 2>/dev/null \
     && echo "  causal-conv1d already installed (fast kernel imports cleanly)" \
     || pip install --no-build-isolation --no-cache-dir causal-conv1d 2>&1 | tail -3 \
     || warn "causal-conv1d install failed (likely no nvcc on PATH); see TROUBLESHOOTING.md §1."
+
+# ─── Phase 2 hand-off ─────────────────────────────────────────────────
+# run_grpo.sh runs its own gates (A: deps recheck + sbcl + macro-gym, B:
+# kata gen, C: baseline, D: smoke, E: full train, F: upload). It depends
+# on the Unsloth/trl install layer above, then takes over end-to-end.
+if [[ "$PHASE" == "grpo" ]]; then
+    step "PHASE=grpo — installs complete, handing off to run_grpo.sh"
+    exec bash scripts/cloud/run_grpo.sh
+fi
 
 step "2/5  Verifying HuggingFace access"
 if [[ -z "${HF_TOKEN:-}" ]]; then
