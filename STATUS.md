@@ -131,10 +131,17 @@ scripts/
 .env.example                  # documented env var template
 ```
 
-## Phase 2 — GRPO: **PLANNED**
+## Phase 2 — GRPO + creative-macros corpus: **PLANNED**
 
-Detailed plan: see `docs/phase2-grpo-plan.md` (project-internal). Key
-external pieces already exist:
+Detailed plan: see `docs/phase2-grpo-plan.md` (project-internal).
+
+Phase 2 ships **one combined release**: a GRPO-trained checkpoint plus a
+hand-curated creative-macros dataset that broadens the model's exploration
+beyond the cl-ds remix space. The originally-separate "Phase 2.5" idea
+was folded in — same reward harness, same compute, no reason to release
+twice.
+
+Key external pieces already exist:
 
 - **Reward harness:** [github.com/jborkowski/macro-gym](https://github.com/jborkowski/macro-gym)
   — Gymnasium environment with a persistent SBCL subprocess speaking an
@@ -158,6 +165,26 @@ Top-level decisions captured in the plan:
 6. **Wandb wired up this time** with `WANDB_ENTITY=j14i-justme-org`.
 7. **Network volume worth renting** during active GRPO experimentation
    (~$10/mo for 150 GB) — caches base model, hot SBCL, checkpoints.
+
+## Phase 3 — Library-aware code generation: **NORTH STAR, DEFERRED**
+
+Detailed plan: see `docs/phase3-library-rpc.md` (project-internal).
+
+The bigger ambition: model reads a CL library's source / API surface and
+writes idiomatic multi-form code that uses it correctly (e.g., a
+`usocket`-based RPC client, a `cl-json` round-trip codec). Different
+reward harness (integration test pass/fail) and different prompt shape
+(library context injection) than Phase 2. Costs ~$150-250 compute and
+6-8 weeks calendar to a first viable version.
+
+**Gated on Phase 2 shipping cleanly.** A model that can't reliably write
+macros will produce broken library-integration code with broken macros
+inside it. Phase 2 is the foundation; Phase 3 is what makes the project
+genuinely useful day-to-day for CL practitioners.
+
+If Phase 2 ships but Phase 3 turns out to be too far, the executable-
+reward pipeline transfers to other code-generation problems (Rust
+macros, SQL with EXPLAIN-cost reward, etc.).
 
 ## Recent commits (most recent first)
 
