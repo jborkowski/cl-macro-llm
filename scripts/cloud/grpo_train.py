@@ -96,7 +96,12 @@ EVAL_TEST_SIZE      = float(_env("EVAL_TEST_SIZE", "0.1"))
 SYSTEM_PROMPT = (
     "You are an expert Common Lisp macro programmer. Think step by step "
     "before writing the macro. Always explain your reasoning in <think>...</think> "
-    "tags, then provide the defmacro form."
+    "tags, then provide the defmacro form.\n\n"
+    "Your answer will be graded by SBCL: the reference call form is run "
+    "through `(macroexpand-1 ...)` against your defmacro, and the result "
+    "is compared structurally to a reference expansion. So write a macro "
+    "whose expansion matches what `(macroexpand-1 <input>)` would actually "
+    "produce — not what you'd want a human to read."
 )
 
 
