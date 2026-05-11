@@ -70,8 +70,14 @@ python -c "import macro_gym; from macro_gym import MacroEnv" \
                                       || fail "macro_gym.MacroEnv not importable"
 python -c "from unsloth import FastLanguageModel; from trl import GRPOTrainer, GRPOConfig" \
                                       || fail "unsloth/trl not importable — run scripts/cloud/run.sh's pip install first"
-df --output=avail -BG /workspace 2>/dev/null | tail -1 | awk '{exit (substr($1,1,length($1)-1) < 60)}' || \
-    fail "less than 60 GB free in /workspace"
+# Min free space: ~15 GB covers 3 LoRA checkpoints (~600 MB each) + sample
+# dumps + pip/HF cache churn. When a network volume is attached the HF
+# cache (54 GB for Qwen3.6-27B) lives on the volume; without one it lives
+# on the container disk and the historical 60-GB threshold is unreachable.
+# Override via DISK_MIN_FREE_GB when running on a fresh/empty pod.
+DISK_MIN_FREE_GB="${DISK_MIN_FREE_GB:-15}"
+df --output=avail -BG /workspace 2>/dev/null | tail -1 | awk -v min="$DISK_MIN_FREE_GB" '{exit (substr($1,1,length($1)-1) < min)}' || \
+    fail "less than ${DISK_MIN_FREE_GB} GB free in /workspace"
 echo "  all checks passed"
 
 # ─── Gate B: generate katas ───────────────────────────────────────────
