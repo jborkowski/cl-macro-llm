@@ -681,8 +681,12 @@ def main() -> int:
         max_prompt_length=1024,
         beta=BETA,
         logging_steps=5,
-        eval_strategy="steps",
-        eval_steps=50,
+        # trl GRPOConfig.__post_init__ requires eval_batch_size * world_size
+        # to be divisible by num_generations. With world_size=1 and
+        # num_generations=8, pin per_device_eval_batch_size=NUM_GENERATIONS.
+        # Eval here is mostly monitoring — actual RL signal is rollout reward.
+        eval_strategy="no",
+        per_device_eval_batch_size=NUM_GENERATIONS,
         save_strategy="steps",
         save_steps=100,
         save_total_limit=3,
