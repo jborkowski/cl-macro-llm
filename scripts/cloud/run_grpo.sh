@@ -36,9 +36,36 @@ if ! command -v sbcl >/dev/null; then
     bash "$REPO_ROOT/scripts/cloud/install_sbcl.sh" || fail "install_sbcl.sh failed"
 fi
 command -v sbcl       >/dev/null     || fail "sbcl still not on PATH after install_sbcl.sh"
-python -c "import macro_gym"          2>/dev/null || \
-    pip install --quiet "git+https://github.com/jborkowski/macro-gym" || \
-    fail "macro-gym install failed"
+# macro-gym install: the upstream repo doesn't have a setup.py/pyproject.toml,
+# so `pip install git+...` rejects it. Clone, drop a minimal pyproject.toml,
+# `pip install -e`. Idempotent — the clone is skipped on subsequent boots.
+if ! python -c "import macro_gym" 2>/dev/null; then
+    MACRO_GYM_DIR="${MACRO_GYM_DIR:-/workspace/macro-gym}"
+    if [[ ! -d "$MACRO_GYM_DIR" ]]; then
+        echo "  cloning macro-gym to $MACRO_GYM_DIR"
+        git clone https://github.com/jborkowski/macro-gym "$MACRO_GYM_DIR" || \
+            fail "macro-gym clone failed"
+    fi
+    if [[ ! -f "$MACRO_GYM_DIR/pyproject.toml" ]]; then
+        echo "  writing minimal pyproject.toml (upstream doesn't ship one)"
+        cat > "$MACRO_GYM_DIR/pyproject.toml" <<'PYPROJ'
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "macro-gym"
+version = "0.1.0"
+description = "Gymnasium env for CL macro generation via SBCL"
+requires-python = ">=3.9"
+dependencies = ["gymnasium"]
+
+[tool.setuptools]
+packages = ["macro_gym"]
+PYPROJ
+    fi
+    pip install --quiet -e "$MACRO_GYM_DIR" || fail "macro-gym editable install failed"
+fi
 python -c "import macro_gym; from macro_gym import MacroEnv" \
                                       || fail "macro_gym.MacroEnv not importable"
 python -c "from unsloth import FastLanguageModel; from trl import GRPOTrainer, GRPOConfig" \
