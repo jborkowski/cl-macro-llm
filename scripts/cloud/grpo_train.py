@@ -496,7 +496,9 @@ def _run_baseline(model, tokenizer, eval_ds) -> int:
         prompt_text = tokenizer.apply_chat_template(
             row["prompt"], tokenize=False, add_generation_prompt=True
         )
-        inputs = tokenizer(prompt_text, return_tensors="pt").to(model.device)
+        # Qwen3.6 tokenizer is actually Qwen3VLProcessor — passing the prompt
+        # positionally makes it think the text is an image_url. Force `text=`.
+        inputs = tokenizer(text=prompt_text, return_tensors="pt").to(model.device)
         with torch.inference_mode():
             out = model.generate(
                 **inputs,
