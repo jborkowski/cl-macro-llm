@@ -243,3 +243,42 @@ and GGUF variants are not. Two paths:
 2. **Re-run postprocess on a fresh pod.** Cheaper to use a smaller GPU (the
    merge + push doesn't need an A100 — even an L4 would do). Just:
    `python scripts/cloud/postprocess.py` with the same env vars.
+
+---
+
+## 9. `ValueError: Model type qwen3_5_text not supported` from mlx-lm
+
+**Symptom.** After merging the Qwen3.6-27B base + LoRA adapter on a Mac
+with `PeftModel.merge_and_unload()` and trying to convert to MLX:
+
+```
+ValueError: Model type qwen3_5_text not supported.
+```
+
+**Why.** `Qwen/Qwen3.6-27B` is registered as the multimodal class
+`Qwen3_5ForConditionalGeneration` with `model_type: qwen3_5`. When PEFT
+merges a text-only LoRA into this and saves, transformers v5 strips down
+to the text-only sub-config — model_type becomes `qwen3_5_text` and
+architectures becomes `Qwen3_5ForCausalLM`. mlx-lm's model registry
+only knows the umbrella `qwen3_5`, so the lookup fails.
+
+The actual model weights and layer structure are unchanged — it's a
+naming/routing issue, not an architecture incompatibility.
+
+**Fix.** Patch the merged `config.json` to use `qwen3_5` before invoking
+`mlx_lm.convert`:
+
+```bash
+sed -i.bak 's/"model_type": "qwen3_5_text"/"model_type": "qwen3_5"/' \
+    "$MERGED_DIR/config.json"
+```
+
+`scripts/mac_to_mlx.sh` does this automatically as step 2.5 (with a `.bak`
+backup so you can revert). Verified working: post-patch
+`mlx_lm.convert --quantize --q-bits 4` produces a 14 GB model that
+generates at ~33 tok/s on Apple Silicon, no quality loss vs unpatched
+inference.
+
+**Long-term fix.** mlx-lm needs a `qwen3_5_text` entry in its model
+registry pointing at the same Qwen3.5 handler. File an issue / PR
+upstream once stabilised.
