@@ -109,6 +109,12 @@ def _normalize(s: str) -> str:
     # 'atom  → (QUOTE atom)
     s = _QUOTED_ATOM_RE.sub(r"(QUOTE \1)", s)
 
+    # `()` and the symbol `NIL` denote the same object in CL. SBCL's
+    # printer always emits `NIL`; hand-written / generated expected
+    # expansions usually write `()` (especially for empty lambda lists
+    # `(lambda () body)`). Canonicalize both to `()`.
+    s = re.sub(r"\bNIL\b", "()", s)
+
     return re.sub(r"\s+", " ", s).strip()
 
 
