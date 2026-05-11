@@ -36,44 +36,27 @@ if ! command -v sbcl >/dev/null; then
     bash "$REPO_ROOT/scripts/cloud/install_sbcl.sh" || fail "install_sbcl.sh failed"
 fi
 command -v sbcl       >/dev/null     || fail "sbcl still not on PATH after install_sbcl.sh"
-# macro-gym install: the upstream repo doesn't have a setup.py/pyproject.toml,
-# so `pip install git+...` rejects it. Clone, drop a minimal pyproject.toml,
-# `pip install -e`. Idempotent — the clone is skipped on subsequent boots.
+# macro-gym install: upstream now has pyproject.toml and the safety+parallel
+# patches landed (commit 39ca165 on jborkowski/macro-gym). We still clone if
+# missing so the dir exists for patch_macro_gym.py to introspect / re-patch
+# in case the user is running an older fork.
+MACRO_GYM_DIR="${MACRO_GYM_DIR:-/workspace/macro-gym}"
 if ! python -c "import macro_gym" 2>/dev/null; then
-    MACRO_GYM_DIR="${MACRO_GYM_DIR:-/workspace/macro-gym}"
     if [[ ! -d "$MACRO_GYM_DIR" ]]; then
         echo "  cloning macro-gym to $MACRO_GYM_DIR"
         git clone https://github.com/jborkowski/macro-gym "$MACRO_GYM_DIR" || \
             fail "macro-gym clone failed"
     fi
-    if [[ ! -f "$MACRO_GYM_DIR/pyproject.toml" ]]; then
-        echo "  writing minimal pyproject.toml (upstream doesn't ship one)"
-        cat > "$MACRO_GYM_DIR/pyproject.toml" <<'PYPROJ'
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
-[project]
-name = "macro-gym"
-version = "0.1.0"
-description = "Gymnasium env for CL macro generation via SBCL"
-requires-python = ">=3.9"
-dependencies = ["gymnasium"]
-
-[tool.setuptools]
-packages = ["macro_gym"]
-PYPROJ
-    fi
     pip install --quiet -e "$MACRO_GYM_DIR" || fail "macro-gym editable install failed"
 fi
-# Apply safety + perf patches to macro-gym's server.lisp:
-#   P1: sb-ext:with-timeout 5 around macroexpand-1 (bounds hostile macro hangs)
-#   P3: pre-compile defmacro source before installing (catches malformed input)
-#   P4: compiler policy debug=0 speed=3 (cleaner expansions, faster compile)
-# Idempotent — safe to re-run on already-patched files.
-python3 "$REPO_ROOT/scripts/cloud/patch_macro_gym.py" \
-    "$MACRO_GYM_DIR/lisp/server.lisp" 2>&1 | sed 's/^/  /' || \
-    echo "  warning: macro-gym patch script returned non-zero; check upstream"
+# Apply safety + perf patches (idempotent — no-op on already-patched files).
+# Upstream has these now, but the patcher is kept as a defensive net for
+# older clones or forks.
+if [[ -d "$MACRO_GYM_DIR" ]]; then
+    python3 "$REPO_ROOT/scripts/cloud/patch_macro_gym.py" "$MACRO_GYM_DIR" \
+        2>&1 | sed 's/^/  /' || \
+        echo "  warning: macro-gym patch script returned non-zero; check upstream"
+fi
 python -c "import macro_gym; from macro_gym import MacroEnv" \
                                       || fail "macro_gym.MacroEnv not importable"
 python -c "from unsloth import FastLanguageModel; from trl import GRPOTrainer, GRPOConfig" \
