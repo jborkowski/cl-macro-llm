@@ -20,9 +20,19 @@
 set -euo pipefail
 
 SBCL_VERSION="${SBCL_VERSION:-2.4.0}"
-SBCL_ARCH="${SBCL_ARCH:-x86-64}"
 INSTALL_ROOT="${INSTALL_ROOT:-/usr/local}"
 SBCL_TMPDIR="${SBCL_TMPDIR:-/tmp/sbcl-install}"
+
+# Auto-detect arch: SourceForge ships sbcl-${ver}-x86-64-linux-binary.tar.bz2
+# and sbcl-${ver}-arm64-linux-binary.tar.bz2. Anything else, the user has
+# to pass SBCL_ARCH explicitly.
+if [[ -z "${SBCL_ARCH:-}" ]]; then
+    case "$(uname -m)" in
+        x86_64|amd64) SBCL_ARCH="x86-64" ;;
+        aarch64|arm64) SBCL_ARCH="arm64" ;;
+        *) echo "ERROR: unknown machine arch $(uname -m); set SBCL_ARCH manually."; exit 1 ;;
+    esac
+fi
 
 step() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 

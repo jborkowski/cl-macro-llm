@@ -54,12 +54,66 @@ VALIDATE_SCRIPT_TEMPLATE = """(in-package :cl-user)
 """
 
 
-def _gensym_normalize(s: str) -> str:
-    """Canonicalize gensym-looking tokens so structural compare works
-    regardless of SBCL's internal counter."""
+# CL symbol charset: letters, digits, plus the usual constituent-class
+# punctuation. First char can be a digit too (e.g. `1+`, `1-`).
+_SYM = r"[A-Za-z0-9*+\-/?!.<>=:&]+"
+_QUOTED_ATOM_RE = re.compile(r"'(" + _SYM + r")")
+_FN_ATOM_RE     = re.compile(r"#'(" + _SYM + r")")
+
+
+def _normalize(s: str) -> str:
+    """Make two SBCL/Lisp source strings structurally comparable:
+      • gensym counters → #:GENSYM
+      • '(...) sub-forms → (QUOTE (...))
+      • 'atom            → (QUOTE atom)
+      • #'atom           → (FUNCTION atom)
+      • whitespace runs  → single space
+    Idempotent. Case is preserved (callers should already be on the same case)."""
+    # Gensyms first — they're noisier than quote/function shorthand.
     s = re.sub(r"#:[A-Z][A-Z0-9-]*?\d+", "#:GENSYM", s)
     s = re.sub(r"\bG\d{2,}\b", "#:GENSYM", s)
+
+    # IMPORTANT — order matters here. `#'X` contains a `'X` substring, so
+    # the `#'` shorthand must be consumed BEFORE any `'atom` rule fires,
+    # otherwise `#'EVENP` rewrites to `#(QUOTE EVENP)`.
+
+    # #'atom → (FUNCTION atom)
+    s = _FN_ATOM_RE.sub(r"(FUNCTION \1)", s)
+
+    # '(...) → (QUOTE (...))  — match a balanced paren group after a leading '
+    def _quote_list(s: str) -> str:
+        out = []
+        i = 0
+        while i < len(s):
+            if s[i] == "'" and i + 1 < len(s) and s[i + 1] == "(":
+                depth = 0
+                j = i + 1
+                while j < len(s):
+                    if s[j] == "(":
+                        depth += 1
+                    elif s[j] == ")":
+                        depth -= 1
+                        if depth == 0:
+                            j += 1
+                            break
+                    j += 1
+                inner = s[i + 1:j]
+                out.append("(QUOTE " + inner + ")")
+                i = j
+            else:
+                out.append(s[i])
+                i += 1
+        return "".join(out)
+    s = _quote_list(s)
+
+    # 'atom  → (QUOTE atom)
+    s = _QUOTED_ATOM_RE.sub(r"(QUOTE \1)", s)
+
     return re.sub(r"\s+", " ", s).strip()
+
+
+# Back-compat alias — the function used to be called _gensym_normalize.
+_gensym_normalize = _normalize
 
 
 def validate_entry(entry: dict, sbcl: str = "sbcl",
@@ -93,7 +147,7 @@ def validate_entry(entry: dict, sbcl: str = "sbcl",
         return False, f"NO_OUTPUT (stderr: {(proc.stderr or '')[:200]})"
     actual = stdout.split("__ACTUAL__", 1)[1].splitlines()[0].strip()
     expected = entry["macroexpand"].strip()
-    if _gensym_normalize(actual) == _gensym_normalize(expected):
+    if _normalize(actual) == _normalize(expected):
         return True, ""
     return False, (f"MISMATCH\n  expected: {expected[:240]}\n"
                    f"  actual:   {actual[:240]}")
