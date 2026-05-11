@@ -66,6 +66,14 @@ PYPROJ
     fi
     pip install --quiet -e "$MACRO_GYM_DIR" || fail "macro-gym editable install failed"
 fi
+# Apply safety + perf patches to macro-gym's server.lisp:
+#   P1: sb-ext:with-timeout 5 around macroexpand-1 (bounds hostile macro hangs)
+#   P3: pre-compile defmacro source before installing (catches malformed input)
+#   P4: compiler policy debug=0 speed=3 (cleaner expansions, faster compile)
+# Idempotent — safe to re-run on already-patched files.
+python3 "$REPO_ROOT/scripts/cloud/patch_macro_gym.py" \
+    "$MACRO_GYM_DIR/lisp/server.lisp" 2>&1 | sed 's/^/  /' || \
+    echo "  warning: macro-gym patch script returned non-zero; check upstream"
 python -c "import macro_gym; from macro_gym import MacroEnv" \
                                       || fail "macro_gym.MacroEnv not importable"
 python -c "from unsloth import FastLanguageModel; from trl import GRPOTrainer, GRPOConfig" \
