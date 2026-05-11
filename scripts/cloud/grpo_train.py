@@ -31,8 +31,14 @@ from __future__ import annotations
 import json
 import os
 import re
+import statistics
 import sys
 from pathlib import Path
+
+# Unsloth long-context GRPO recommendation: keep vLLM weights swapped out
+# while the trainer step runs, then page them back for rollouts. Must be
+# set before unsloth is imported.
+os.environ.setdefault("UNSLOTH_VLLM_STANDBY", "1")
 
 import torch
 from datasets import Dataset
@@ -57,6 +63,26 @@ MAX_STEPS           = int(_env("MAX_STEPS", "500"))
 LEARNING_RATE       = float(_env("LEARNING_RATE", "5e-7"))
 BETA                = float(_env("BETA", "0.05"))
 TEMPERATURE         = float(_env("TEMPERATURE", "0.9"))
+
+# Unsloth long-context GRPO knobs (see
+# https://unsloth.ai/docs/get-started/reinforcement-learning-rl-guide/grpo-long-context
+# and the RL guide root). loss_type ∈ {grpo, gspo, dr_grpo}; the asymmetric
+# epsilon_high / delta trust region is the Unsloth-recommended default for
+# stable RL on long completions.
+LOSS_TYPE                       = _env("LOSS_TYPE", "grpo")
+EPSILON                         = float(_env("EPSILON", "0.2"))
+EPSILON_HIGH                    = float(_env("EPSILON_HIGH", "0.28"))
+DELTA                           = float(_env("DELTA", "1.5"))
+MASK_TRUNCATED_COMPLETIONS      = _env("MASK_TRUNCATED_COMPLETIONS", "1") != "0"
+# Both default to "auto-tune by VRAM" if env is empty.
+UNSLOTH_GRPO_MINI_BATCH         = _env("UNSLOTH_GRPO_MINI_BATCH", "")
+UNSLOTH_LOGIT_CHUNK_MULTIPLIER  = _env("UNSLOTH_LOGIT_CHUNK_MULTIPLIER", "")
+
+# Baseline-only: run the SFT policy over the eval split, compute mean
+# reward, print baseline_mean=<float> and exit before constructing the
+# trainer. Gate C of run_grpo.sh depends on this.
+BASELINE_ONLY       = _env("BASELINE_ONLY", "") not in ("", "0", "false", "False")
+EVAL_TEST_SIZE      = float(_env("EVAL_TEST_SIZE", "0.1"))
 
 
 SYSTEM_PROMPT = (
@@ -233,6 +259,60 @@ def macro_gym_reward(prompts, completions, **kwargs) -> list[float]:
     return rewards
 
 
+# ─── baseline-only mode ───────────────────────────────────────────────
+
+def _run_baseline(model, tokenizer, eval_ds) -> int:
+    """Greedy-ish single rollout per eval kata; report mean reward,
+    compile rate (>0), and full-credit rate (>=0.99). Gate C consumer
+    parses the `baseline_mean=` line.
+    """
+    FastLanguageModel.for_inference(model)
+    rewards: list[float] = []
+    n = len(eval_ds)
+    print(f"\n=== Baseline rollout over {n} eval katas ===")
+    for i, row in enumerate(eval_ds):
+        prompt_text = tokenizer.apply_chat_template(
+            row["prompt"], tokenize=False, add_generation_prompt=True
+        )
+        inputs = tokenizer(prompt_text, return_tensors="pt").to(model.device)
+        with torch.inference_mode():
+            out = model.generate(
+                **inputs,
+                max_new_tokens=MAX_COMPLETION_LEN,
+                do_sample=True,
+                temperature=TEMPERATURE,
+                top_p=0.95,
+                pad_token_id=tokenizer.eos_token_id or tokenizer.pad_token_id,
+            )
+        completion = tokenizer.decode(
+            out[0, inputs.input_ids.shape[1]:], skip_special_tokens=True
+        )
+        r = macro_gym_reward(
+            prompts=[row["prompt"]],
+            completions=[completion],
+            kata_path=[row["kata_path"]],
+        )[0]
+        rewards.append(r)
+        if (i + 1) % 10 == 0 or i + 1 == n:
+            running = statistics.fmean(rewards)
+            print(f"  [{i + 1:>4d}/{n}] running mean={running:+.4f}")
+
+    if not rewards:
+        print("baseline_mean=0.0")
+        print("baseline_compile_rate=0.0")
+        print("baseline_full_credit=0.0")
+        return 0
+
+    mean = statistics.fmean(rewards)
+    compile_rate = sum(1 for r in rewards if r > 0) / len(rewards)
+    full_credit  = sum(1 for r in rewards if r >= 0.99) / len(rewards)
+    print(f"\n=== Baseline summary (n={len(rewards)}) ===")
+    print(f"baseline_mean={mean:.4f}")
+    print(f"baseline_compile_rate={compile_rate:.4f}")
+    print(f"baseline_full_credit={full_credit:.4f}")
+    return 0
+
+
 # ─── main ─────────────────────────────────────────────────────────────
 
 def main() -> int:
@@ -278,11 +358,14 @@ def main() -> int:
         by_cat[cat] = by_cat.get(cat, 0) + 1
     print("  by category: " + ", ".join(f"{k}={v}" for k, v in sorted(by_cat.items())))
 
-    splits = full_ds.train_test_split(test_size=0.1, seed=42)
+    splits = full_ds.train_test_split(test_size=EVAL_TEST_SIZE, seed=42)
     train_ds, eval_ds = splits["train"], splits["test"]
     print(f"  split: {len(train_ds)} train / {len(eval_ds)} eval")
 
-    config = GRPOConfig(
+    if BASELINE_ONLY:
+        return _run_baseline(model, tokenizer, eval_ds)
+
+    grpo_kwargs: dict = dict(
         output_dir=OUTPUT_DIR,
         max_steps=MAX_STEPS,
         per_device_train_batch_size=2,
@@ -304,9 +387,20 @@ def main() -> int:
         bf16=True,
         seed=42,
         report_to=["wandb"] if wandb_ok else "none",
-        # GRPO-specific:
-        use_vllm=False,   # vllm doesn't support qwen3_5 yet; rollouts via HF generate
+        # Rollouts: vllm doesn't support qwen3_5 yet, so rollouts via HF generate.
+        use_vllm=False,
+        # Unsloth long-context GRPO defaults (see RL guide):
+        loss_type=LOSS_TYPE,
+        epsilon=EPSILON,
+        epsilon_high=EPSILON_HIGH,
+        delta=DELTA,
+        mask_truncated_completions=MASK_TRUNCATED_COMPLETIONS,
     )
+    if UNSLOTH_GRPO_MINI_BATCH:
+        grpo_kwargs["unsloth_grpo_mini_batch"] = int(UNSLOTH_GRPO_MINI_BATCH)
+    if UNSLOTH_LOGIT_CHUNK_MULTIPLIER:
+        grpo_kwargs["unsloth_logit_chunk_multiplier"] = int(UNSLOTH_LOGIT_CHUNK_MULTIPLIER)
+    config = GRPOConfig(**grpo_kwargs)
 
     trainer = GRPOTrainer(
         model=model,
