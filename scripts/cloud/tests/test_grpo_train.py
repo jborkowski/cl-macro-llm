@@ -254,11 +254,19 @@ def test_load_katas_empty_root(tmp_path):
 # ─── tests: macro_gym_reward (with mock env) ──────────────────────────
 
 class _MockEnv:
-    """Reward = 1.0 if defmacro contains 'good', else -0.4."""
+    """Reward = 1.0 if defmacro contains 'good', else -0.4.
 
-    def __init__(self, kata_dir):
-        self.kata_dir = kata_dir
+    Matches the current macro_gym.MacroEnv contract: takes `kata_id`,
+    requires `reset()` before `step()`. _EnvPool calls both."""
+
+    def __init__(self, kata_id):
+        self.kata_id = kata_id
         self.closed = False
+        self._reset_count = 0
+
+    def reset(self, seed=None, options=None):
+        self._reset_count += 1
+        return "obs", {"kata_id": self.kata_id}
 
     def step(self, defmacro):
         r = 1.0 if "good" in defmacro else -0.4
@@ -294,14 +302,16 @@ def test_macro_gym_reward_happy_path(monkeypatch):
     rewards = grpo_train.macro_gym_reward(
         prompts=[None, None, None],
         completions=completions,
-        kata_path=["/tmp/a", "/tmp/b", "/tmp/c"],
+        kata_id=["ka", "kb", "kc"],
     )
     assert rewards == [1.0, -0.2, -0.2]
 
 
 def test_macro_gym_reward_clamps_to_upper_bound(monkeypatch):
     class _CrazyEnv:
-        def __init__(self, kata_dir): pass
+        def __init__(self, kata_id): pass
+        def reset(self, seed=None, options=None):
+            return "obs", {}
         def step(self, defmacro):
             return None, 99.0, True, False, {}
         def close(self): pass
@@ -311,14 +321,16 @@ def test_macro_gym_reward_clamps_to_upper_bound(monkeypatch):
     rewards = grpo_train.macro_gym_reward(
         prompts=[None],
         completions=["(defmacro x () nil)"],
-        kata_path=["/tmp/x"],
+        kata_id=["kx"],
     )
     assert rewards == [1.5]
 
 
 def test_macro_gym_reward_clamps_to_lower_bound(monkeypatch):
     class _NegEnv:
-        def __init__(self, kata_dir): pass
+        def __init__(self, kata_id): pass
+        def reset(self, seed=None, options=None):
+            return "obs", {}
         def step(self, defmacro):
             return None, -99.0, True, False, {}
         def close(self): pass
@@ -328,14 +340,16 @@ def test_macro_gym_reward_clamps_to_lower_bound(monkeypatch):
     rewards = grpo_train.macro_gym_reward(
         prompts=[None],
         completions=["(defmacro x () nil)"],
-        kata_path=["/tmp/x"],
+        kata_id=["kx"],
     )
     assert rewards == [-0.5]
 
 
 def test_macro_gym_reward_step_error_penalised(monkeypatch):
     class _BoomEnv:
-        def __init__(self, kata_dir): pass
+        def __init__(self, kata_id): pass
+        def reset(self, seed=None, options=None):
+            return "obs", {}
         def step(self, defmacro):
             raise RuntimeError("sbcl died")
         def close(self): pass
@@ -345,7 +359,7 @@ def test_macro_gym_reward_step_error_penalised(monkeypatch):
     rewards = grpo_train.macro_gym_reward(
         prompts=[None],
         completions=["(defmacro x () nil)"],
-        kata_path=["/tmp/x"],
+        kata_id=["kx"],
     )
     assert rewards == [-0.3]
 
@@ -358,7 +372,7 @@ def test_macro_gym_reward_mismatched_lengths_raises(monkeypatch):
         grpo_train.macro_gym_reward(
             prompts=[None, None],
             completions=["(defmacro a () nil)", "(defmacro b () nil)"],
-            kata_path=["/tmp/x"],
+            kata_id=["ka"],
         )
 
 
@@ -372,7 +386,7 @@ def test_macro_gym_reward_completion_as_messages(monkeypatch):
     rewards = grpo_train.macro_gym_reward(
         prompts=[None],
         completions=[msgs],
-        kata_path=["/tmp/x"],
+        kata_id=["kx"],
     )
     assert rewards == [1.0]
 
@@ -383,10 +397,12 @@ def test_pool_eviction_fifo(monkeypatch):
     instantiated: list[str] = []
 
     class _CountingEnv:
-        def __init__(self, kata_dir):
-            instantiated.append(kata_dir)
-            self.kata_dir = kata_dir
+        def __init__(self, kata_id):
+            instantiated.append(kata_id)
+            self.kata_id = kata_id
             self.closed = False
+        def reset(self, seed=None, options=None):
+            return "obs", {"kata_id": self.kata_id}
         def step(self, defmacro):
             return None, 0.0, True, False, {}
         def close(self):
@@ -397,13 +413,13 @@ def test_pool_eviction_fifo(monkeypatch):
     monkeypatch.setattr(grpo_train, "_ENV_CACHE_MAX", 2)
     monkeypatch.setattr(grpo_train, "_POOL_PER_KATA", 1)
 
-    pa = grpo_train._get_pool("/k/a")
-    pb = grpo_train._get_pool("/k/b")
-    assert "/k/a" in grpo_train._pools and "/k/b" in grpo_train._pools
-    pc = grpo_train._get_pool("/k/c")  # evicts /k/a's pool
-    assert "/k/a" not in grpo_train._pools
-    assert "/k/b" in grpo_train._pools and "/k/c" in grpo_train._pools
-    assert instantiated == ["/k/a", "/k/b", "/k/c"]
+    pa = grpo_train._get_pool("ka")
+    pb = grpo_train._get_pool("kb")
+    assert "ka" in grpo_train._pools and "kb" in grpo_train._pools
+    pc = grpo_train._get_pool("kc")  # evicts ka's pool
+    assert "ka" not in grpo_train._pools
+    assert "kb" in grpo_train._pools and "kc" in grpo_train._pools
+    assert instantiated == ["ka", "kb", "kc"]
 
 
 def test_pool_per_kata_size(monkeypatch):
@@ -411,8 +427,10 @@ def test_pool_per_kata_size(monkeypatch):
     instantiated: list[str] = []
 
     class _CountingEnv:
-        def __init__(self, kata_dir):
-            instantiated.append(kata_dir)
+        def __init__(self, kata_id):
+            instantiated.append(kata_id)
+        def reset(self, seed=None, options=None):
+            return "obs", {}
         def step(self, defmacro):
             return None, 0.0, True, False, {}
         def close(self): pass
@@ -421,8 +439,8 @@ def test_pool_per_kata_size(monkeypatch):
     grpo_train._close_all_pools()
     monkeypatch.setattr(grpo_train, "_POOL_PER_KATA", 4)
 
-    grpo_train._get_pool("/k/a")
-    assert len([k for k in instantiated if k == "/k/a"]) == 4
+    grpo_train._get_pool("ka")
+    assert len([k for k in instantiated if k == "ka"]) == 4
 
 
 def test_sample_dump_writes_jsonl(monkeypatch, tmp_path):
@@ -442,7 +460,7 @@ def test_sample_dump_writes_jsonl(monkeypatch, tmp_path):
     grpo_train.macro_gym_reward(
         prompts=[{"role": "user", "content": f"q{i}"} for i in range(3)],
         completions=completions,
-        kata_path=["/tmp/a", "/tmp/b", "/tmp/c"],
+        kata_id=["ka", "kb", "kc"],
     )
     dump = tmp_path / "samples-step-00050.jsonl"
     assert dump.exists()
@@ -467,7 +485,7 @@ def test_sample_dump_on_demand(monkeypatch, tmp_path):
     grpo_train.macro_gym_reward(
         prompts=[None],
         completions=["(defmacro good (x) `(list ,x))"],
-        kata_path=["/tmp/a"],
+        kata_id=["ka"],
     )
     assert (tmp_path / "samples-step-00007.jsonl").exists()
     # sample_now should auto-clear after firing
