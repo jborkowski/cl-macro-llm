@@ -73,11 +73,19 @@ python -c "from unsloth import FastLanguageModel; from trl import GRPOTrainer, G
 # Min free space: ~15 GB covers 3 LoRA checkpoints (~600 MB each) + sample
 # dumps + pip/HF cache churn. When a network volume is attached the HF
 # cache (54 GB for Qwen3.6-27B) lives on the volume; without one it lives
-# on the container disk and the historical 60-GB threshold is unreachable.
-# Override via DISK_MIN_FREE_GB when running on a fresh/empty pod.
+# on the container disk. Override via DISK_MIN_FREE_GB on tighter pods.
 DISK_MIN_FREE_GB="${DISK_MIN_FREE_GB:-15}"
-df --output=avail -BG /workspace 2>/dev/null | tail -1 | awk -v min="$DISK_MIN_FREE_GB" '{exit (substr($1,1,length($1)-1) < min)}' || \
-    fail "less than ${DISK_MIN_FREE_GB} GB free in /workspace"
+DISK_AVAIL_GB=$(df --output=avail -BG /workspace 2>/dev/null | tail -1 | tr -d ' G')
+# Numeric comparison via shell arithmetic — earlier awk-substring version
+# silently lexicographic-compared "144" < "15" (true!) and tripped the check
+# even though /workspace had plenty of space. Don't repeat that.
+if [[ -z "$DISK_AVAIL_GB" || ! "$DISK_AVAIL_GB" =~ ^[0-9]+$ ]]; then
+    fail "couldn't parse /workspace free space (got: '$DISK_AVAIL_GB')"
+fi
+if (( DISK_AVAIL_GB < DISK_MIN_FREE_GB )); then
+    fail "less than ${DISK_MIN_FREE_GB} GB free in /workspace (have ${DISK_AVAIL_GB} GB)"
+fi
+echo "  /workspace free: ${DISK_AVAIL_GB} GB (need ≥${DISK_MIN_FREE_GB} GB)"
 echo "  all checks passed"
 
 # ─── Gate B: generate katas ───────────────────────────────────────────
