@@ -133,33 +133,31 @@ scripts/
 
 ## Phase 2 — GRPO: **PLANNED**
 
-What we now know from Phase 1 that informs the GRPO design:
+Detailed plan: see `docs/phase2-grpo-plan.md` (project-internal). Key
+external pieces already exist:
 
-1. **Reward signal must include SBCL compilation.** The function-name
-   hallucination class is invisible to next-token-prediction loss. A
-   pass/fail signal from `compile-file` (or `sb-ext:eval-when` + read +
-   eval) catches it directly.
-2. **`load_best_model_at_end` + eval at every save aligns naturally with
-   PPO-style rollouts.** We already have the eval set wired.
-3. **Network volume matters now.** A single GRPO iteration is 4-8 h vs
-   2-3 h for SFT, and we iterate more. 150-200 GB RunPod volume in a
-   region with reliable A100 supply.
-4. **Reward harness must be sandboxed.** A generated macro can run
-   arbitrary code in SBCL — use `:safe` package + timeout + process
-   isolation. Don't `(load ...)` user input straight into the trainer's
-   Lisp image.
-5. **Keep `lora_dropout=0.05`.** GRPO benefits from exploration; some
-   regularization keeps the policy from collapsing.
+- **Reward harness:** [github.com/jborkowski/macro-gym](https://github.com/jborkowski/macro-gym)
+  — Gymnasium environment with a persistent SBCL subprocess speaking an
+  s-expression protocol. Graded reward `[−0.1, 1.0]` with variable
+  normalization (`:V1`, `:V2`, …) for α-equivalent expansion comparison.
+  Drops directly into TRL `GRPOTrainer` as `reward_funcs=[macro_gym_reward]`.
+- **Source dataset:** [hf.co/datasets/j14i/cl-ds](https://huggingface.co/datasets/j14i/cl-ds)
+  — 4,267 examples with verified `macroexpand` ground truth, ready to
+  be transcoded into macro-gym kata directories.
+- **Policy init:** the SFT adapter from Phase 1 ([hf.co/j14i/cl-macro-27b-lora](https://huggingface.co/j14i/cl-macro-27b-lora)).
 
-Reward signal ranking (strongest first):
-1. **`macroexpand` correctness** — `(macroexpand '(your-macro ...))` returns
-   sensible form without error. Cheapest sanity gate.
-2. **Test pass rate** — if the prompt has expected expansion or behavior,
-   compare against it.
-3. **Linter / style** — symbol hygiene (gensym used where capture risk
-   exists), naming conventions, `&body` vs `&rest` choice.
-4. **LLM-as-judge** — fallback for open-ended prompts where the above
-   don't apply.
+Top-level decisions captured in the plan:
+
+1. **Skip SFT v2.** Eval loss plateaued; function-name hallucinations
+   need executable feedback, not more SFT data.
+2. **Graded reward, not pass/fail.** Smoother gradient; macro-gym
+   already implements 0.1-0.9 partial credit on multi-test katas.
+3. **TRL `GRPOTrainer`** over custom RL loop. Less code to babysit.
+4. **β = 0.05 KL penalty** vs the frozen SFT reference. Tunable.
+5. **Compute budget:** ~$8-12 for first 500-step run on A100 80GB.
+6. **Wandb wired up this time** with `WANDB_ENTITY=j14i-justme-org`.
+7. **Network volume worth renting** during active GRPO experimentation
+   (~$10/mo for 150 GB) — caches base model, hot SBCL, checkpoints.
 
 ## Recent commits (most recent first)
 
