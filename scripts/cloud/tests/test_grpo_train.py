@@ -63,6 +63,14 @@ _fake_module("trl", GRPOConfig=_FakeGRPOConfig, GRPOTrainer=_FakeGRPOTrainer)
 _fake_module("torch", inference_mode=contextlib.nullcontext)
 
 
+class _FakeTrainerCallback:
+    """transformers.TrainerCallback stand-in — just an empty base class."""
+    pass
+
+
+_fake_module("transformers", TrainerCallback=_FakeTrainerCallback)
+
+
 class _FakeDataset:
     """Minimal Dataset replacement covering the surface load_katas uses."""
 
@@ -266,9 +274,18 @@ def _install_mock_macro_gym(env_cls):
     sys.modules["macro_gym"] = mod
 
 
+def _reset_pools(monkeypatch=None):
+    """Reset the per-kata SBCL pool cache + force single-threaded reward
+    for deterministic ordering in assertions."""
+    grpo_train._close_all_pools()
+    if monkeypatch is not None:
+        monkeypatch.setattr(grpo_train, "_REWARD_WORKERS", 1)
+        monkeypatch.setattr(grpo_train, "_POOL_PER_KATA", 1)
+
+
 def test_macro_gym_reward_happy_path(monkeypatch):
     _install_mock_macro_gym(_MockEnv)
-    grpo_train._env_cache.clear()
+    _reset_pools(monkeypatch)
     completions = [
         "<think>plan</think>\n(defmacro good (x) `(list ,x))",
         "(defmacro bad (x) `(broken",   # truncated → -0.2
@@ -290,7 +307,7 @@ def test_macro_gym_reward_clamps_to_upper_bound(monkeypatch):
         def close(self): pass
 
     _install_mock_macro_gym(_CrazyEnv)
-    grpo_train._env_cache.clear()
+    _reset_pools(monkeypatch)
     rewards = grpo_train.macro_gym_reward(
         prompts=[None],
         completions=["(defmacro x () nil)"],
@@ -307,7 +324,7 @@ def test_macro_gym_reward_clamps_to_lower_bound(monkeypatch):
         def close(self): pass
 
     _install_mock_macro_gym(_NegEnv)
-    grpo_train._env_cache.clear()
+    _reset_pools(monkeypatch)
     rewards = grpo_train.macro_gym_reward(
         prompts=[None],
         completions=["(defmacro x () nil)"],
@@ -324,7 +341,7 @@ def test_macro_gym_reward_step_error_penalised(monkeypatch):
         def close(self): pass
 
     _install_mock_macro_gym(_BoomEnv)
-    grpo_train._env_cache.clear()
+    _reset_pools(monkeypatch)
     rewards = grpo_train.macro_gym_reward(
         prompts=[None],
         completions=["(defmacro x () nil)"],
@@ -335,7 +352,7 @@ def test_macro_gym_reward_step_error_penalised(monkeypatch):
 
 def test_macro_gym_reward_mismatched_lengths_raises(monkeypatch):
     _install_mock_macro_gym(_MockEnv)
-    grpo_train._env_cache.clear()
+    _reset_pools(monkeypatch)
     import pytest
     with pytest.raises(RuntimeError, match="reward fn"):
         grpo_train.macro_gym_reward(
@@ -347,7 +364,7 @@ def test_macro_gym_reward_mismatched_lengths_raises(monkeypatch):
 
 def test_macro_gym_reward_completion_as_messages(monkeypatch):
     _install_mock_macro_gym(_MockEnv)
-    grpo_train._env_cache.clear()
+    _reset_pools(monkeypatch)
     msgs = [
         {"role": "user",      "content": "write the macro"},
         {"role": "assistant", "content": "(defmacro good (x) `(list ,x))"},
@@ -360,8 +377,9 @@ def test_macro_gym_reward_completion_as_messages(monkeypatch):
     assert rewards == [1.0]
 
 
-def test_env_cache_eviction_fifo(monkeypatch):
-    """When the cache fills, the oldest entry should be closed and dropped."""
+def test_pool_eviction_fifo(monkeypatch):
+    """When the kata-pool cache fills, the oldest pool should be closed
+    and dropped."""
     instantiated: list[str] = []
 
     class _CountingEnv:
@@ -375,18 +393,180 @@ def test_env_cache_eviction_fifo(monkeypatch):
             self.closed = True
 
     _install_mock_macro_gym(_CountingEnv)
-    grpo_train._env_cache.clear()
+    grpo_train._close_all_pools()
     monkeypatch.setattr(grpo_train, "_ENV_CACHE_MAX", 2)
+    monkeypatch.setattr(grpo_train, "_POOL_PER_KATA", 1)
 
-    a = grpo_train._get_env("/k/a")
-    b = grpo_train._get_env("/k/b")
-    assert "/k/a" in grpo_train._env_cache and "/k/b" in grpo_train._env_cache
-    c = grpo_train._get_env("/k/c")   # evicts /k/a
-    assert "/k/a" not in grpo_train._env_cache
-    assert a.closed is True
-    assert "/k/b" in grpo_train._env_cache
-    assert "/k/c" in grpo_train._env_cache
+    pa = grpo_train._get_pool("/k/a")
+    pb = grpo_train._get_pool("/k/b")
+    assert "/k/a" in grpo_train._pools and "/k/b" in grpo_train._pools
+    pc = grpo_train._get_pool("/k/c")  # evicts /k/a's pool
+    assert "/k/a" not in grpo_train._pools
+    assert "/k/b" in grpo_train._pools and "/k/c" in grpo_train._pools
     assert instantiated == ["/k/a", "/k/b", "/k/c"]
+
+
+def test_pool_per_kata_size(monkeypatch):
+    """A kata pool of size N creates exactly N MacroEnv instances upfront."""
+    instantiated: list[str] = []
+
+    class _CountingEnv:
+        def __init__(self, kata_dir):
+            instantiated.append(kata_dir)
+        def step(self, defmacro):
+            return None, 0.0, True, False, {}
+        def close(self): pass
+
+    _install_mock_macro_gym(_CountingEnv)
+    grpo_train._close_all_pools()
+    monkeypatch.setattr(grpo_train, "_POOL_PER_KATA", 4)
+
+    grpo_train._get_pool("/k/a")
+    assert len([k for k in instantiated if k == "/k/a"]) == 4
+
+
+def test_sample_dump_writes_jsonl(monkeypatch, tmp_path):
+    """When LOG_SAMPLES_EVERY and step align, the reward fn writes a JSONL."""
+    _install_mock_macro_gym(_MockEnv)
+    _reset_pools(monkeypatch)
+    monkeypatch.setitem(grpo_train._runtime, "step", 50)
+    monkeypatch.setitem(grpo_train._runtime, "log_samples_every", 25)
+    monkeypatch.setitem(grpo_train._runtime, "n_samples_per_dump", 2)
+    monkeypatch.setitem(grpo_train._runtime, "output_dir", tmp_path)
+
+    completions = [
+        "(defmacro good (x) `(list ,x))",
+        "(defmacro good-two (x) `(list ,x))",
+        "no macro",
+    ]
+    grpo_train.macro_gym_reward(
+        prompts=[{"role": "user", "content": f"q{i}"} for i in range(3)],
+        completions=completions,
+        kata_path=["/tmp/a", "/tmp/b", "/tmp/c"],
+    )
+    dump = tmp_path / "samples-step-00050.jsonl"
+    assert dump.exists()
+    lines = [json.loads(ln) for ln in dump.read_text().splitlines() if ln.strip()]
+    assert len(lines) == 2
+    for entry in lines:
+        assert entry["step"] == 50
+        assert "completion" in entry
+        assert "reward" in entry
+
+
+def test_sample_dump_on_demand(monkeypatch, tmp_path):
+    """sample_now=True forces a dump even mid-cycle."""
+    _install_mock_macro_gym(_MockEnv)
+    _reset_pools(monkeypatch)
+    monkeypatch.setitem(grpo_train._runtime, "step", 7)   # mid-cycle
+    monkeypatch.setitem(grpo_train._runtime, "log_samples_every", 25)
+    monkeypatch.setitem(grpo_train._runtime, "sample_now", True)
+    monkeypatch.setitem(grpo_train._runtime, "n_samples_per_dump", 1)
+    monkeypatch.setitem(grpo_train._runtime, "output_dir", tmp_path)
+
+    grpo_train.macro_gym_reward(
+        prompts=[None],
+        completions=["(defmacro good (x) `(list ,x))"],
+        kata_path=["/tmp/a"],
+    )
+    assert (tmp_path / "samples-step-00007.jsonl").exists()
+    # sample_now should auto-clear after firing
+    assert grpo_train._runtime["sample_now"] is False
+
+
+# ─── tests: runtime callbacks ─────────────────────────────────────────
+
+class _FakeState:
+    def __init__(self, step):
+        self.global_step = step
+
+
+class _FakeControl:
+    def __init__(self):
+        self.should_save = False
+        self.should_training_stop = False
+
+
+def test_metrics_logger_appends_jsonl(tmp_path):
+    cb = grpo_train.MetricsLoggerCallback(tmp_path / "metrics.jsonl")
+    cb.on_log(None, _FakeState(10), _FakeControl(),
+              logs={"loss": 0.5, "reward": 0.3})
+    cb.on_log(None, _FakeState(20), _FakeControl(),
+              logs={"loss": 0.4, "reward": 0.4})
+    lines = (tmp_path / "metrics.jsonl").read_text().splitlines()
+    parsed = [json.loads(ln) for ln in lines]
+    assert parsed[0] == {"step": 10, "loss": 0.5, "reward": 0.3}
+    assert parsed[1] == {"step": 20, "loss": 0.4, "reward": 0.4}
+
+
+def test_metrics_logger_skips_empty(tmp_path):
+    cb = grpo_train.MetricsLoggerCallback(tmp_path / "metrics.jsonl")
+    cb.on_log(None, _FakeState(1), _FakeControl(), logs=None)
+    cb.on_log(None, _FakeState(2), _FakeControl(), logs={})
+    assert not (tmp_path / "metrics.jsonl").exists()
+
+
+def test_runtime_control_stop(tmp_path):
+    ctl = tmp_path / "control.json"
+    ctl.write_text(json.dumps({"stop": True}))
+    args = types.SimpleNamespace(temperature=0.9)
+    cb = grpo_train.RuntimeControlCallback(ctl, args)
+    control = _FakeControl()
+    cb.on_step_begin(args, _FakeState(42), control)
+    assert control.should_training_stop is True
+    assert control.should_save is True
+    assert grpo_train._runtime["step"] == 42
+
+
+def test_runtime_control_save_now(tmp_path):
+    ctl = tmp_path / "control.json"
+    ctl.write_text(json.dumps({"save_now": True}))
+    args = types.SimpleNamespace(temperature=0.9)
+    cb = grpo_train.RuntimeControlCallback(ctl, args)
+    control = _FakeControl()
+    cb.on_step_begin(args, _FakeState(15), control)
+    assert control.should_save is True
+    assert control.should_training_stop is False
+
+
+def test_runtime_control_sample_now_and_temp(tmp_path):
+    grpo_train._runtime["sample_now"] = False
+    ctl = tmp_path / "control.json"
+    ctl.write_text(json.dumps({"sample_now": True, "temperature": 0.5,
+                               "log_samples_every": 10}))
+    args = types.SimpleNamespace(temperature=0.9)
+    cb = grpo_train.RuntimeControlCallback(ctl, args)
+    cb.on_step_begin(args, _FakeState(3), _FakeControl())
+    assert grpo_train._runtime["sample_now"] is True
+    assert args.temperature == 0.5
+    assert grpo_train._runtime["log_samples_every"] == 10
+
+
+def test_runtime_control_skips_unchanged_file(tmp_path):
+    ctl = tmp_path / "control.json"
+    ctl.write_text(json.dumps({"save_now": True}))
+    args = types.SimpleNamespace(temperature=0.9)
+    cb = grpo_train.RuntimeControlCallback(ctl, args)
+
+    c1 = _FakeControl()
+    cb.on_step_begin(args, _FakeState(1), c1)
+    assert c1.should_save is True
+
+    # Second call without mtime change: should NOT re-fire save_now.
+    c2 = _FakeControl()
+    cb.on_step_begin(args, _FakeState(2), c2)
+    assert c2.should_save is False
+
+
+def test_runtime_control_missing_file_is_noop(tmp_path):
+    ctl = tmp_path / "does-not-exist.json"
+    args = types.SimpleNamespace(temperature=0.9)
+    cb = grpo_train.RuntimeControlCallback(ctl, args)
+    c = _FakeControl()
+    cb.on_step_begin(args, _FakeState(99), c)
+    assert c.should_save is False
+    assert c.should_training_stop is False
+    assert grpo_train._runtime["step"] == 99   # step still updated
 
 
 # ─── module-level env knobs sanity ────────────────────────────────────

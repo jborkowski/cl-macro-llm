@@ -22,8 +22,15 @@ Optional:
     LEARNING_RATE      default 5e-7
     BETA               default 0.05 — KL penalty toward frozen reference (SFT)
     TEMPERATURE        default 0.9 — rollout sampling temperature
-    WANDB_ENTITY       e.g. j14i-justme-org
-    WANDB_PROJECT      default cl-macro-llm-grpo
+    WANDB_ENTITY       e.g. j14i-n
+    WANDB_PROJECT      default cl-macro-llm
+
+Runtime / SBCL parallelism:
+    SBCL_KATA_CACHE        default 16   — how many kata pools to keep alive
+    SBCL_POOL_PER_KATA     default 4    — student SBCL procs per kata
+    SBCL_REWARD_WORKERS    default 16   — thread-pool size for scoring
+    LOG_SAMPLES_EVERY      default 25   — steps between sample dumps
+    SAMPLES_PER_DUMP       default 4    — rollouts written per dump
 """
 
 from __future__ import annotations
@@ -44,6 +51,7 @@ import torch
 from datasets import Dataset
 from unsloth import FastLanguageModel
 from trl import GRPOConfig, GRPOTrainer
+from transformers import TrainerCallback
 
 
 # ─── env helpers ──────────────────────────────────────────────────────
@@ -113,7 +121,7 @@ def _maybe_init_wandb() -> bool:
             print("wandb: no default entity; set WANDB_ENTITY in env. Skipping.")
             return False
         os.environ.setdefault("WANDB_ENTITY", entity)
-    os.environ.setdefault("WANDB_PROJECT", "cl-macro-llm-grpo")
+    os.environ.setdefault("WANDB_PROJECT", "cl-macro-llm")
     return True
 
 
@@ -191,27 +199,78 @@ def extract_defmacro(text: str) -> str | None:
     return None  # truncated, never closed
 
 
-# Lazy env cache. macro-gym persists an SBCL subprocess per env; we keep
-# the most recently used ones alive but don't preload all 753+.
-_env_cache: dict[str, "MacroEnv"] = {}
-_ENV_CACHE_MAX = 64
+# Per-kata pool of MacroEnv instances. macro-gym persists one SBCL
+# subprocess per env; concurrent calls into the same env would corrupt
+# its IO state, so we keep N "students" per kata, check them out for
+# the duration of a step, and check them back in.
+#
+# Memory budget: each SBCL ≈ 50 MB. With 16 cached katas × 4 students =
+# 64 SBCL procs ≈ 3 GB. Tunable via env.
+import queue
+import random
+import threading
+from concurrent.futures import ThreadPoolExecutor
+
+_ENV_CACHE_MAX        = int(_env("SBCL_KATA_CACHE", "16"))
+_POOL_PER_KATA        = int(_env("SBCL_POOL_PER_KATA", "4"))
+_REWARD_WORKERS       = int(_env("SBCL_REWARD_WORKERS", "16"))
 
 
-def _get_env(kata_path: str):
-    global _env_cache
-    if kata_path in _env_cache:
-        return _env_cache[kata_path]
-    from macro_gym import MacroEnv  # imported lazily so script imports without it
-    if len(_env_cache) >= _ENV_CACHE_MAX:
-        # FIFO eviction (good enough — kata sampling is random anyway)
-        oldest = next(iter(_env_cache))
+class _EnvPool:
+    """Per-kata bag of MacroEnv handles, checked out via a thread-safe queue."""
+
+    def __init__(self, kata_path: str, size: int):
+        from macro_gym import MacroEnv  # lazy import
+        self.kata_path = kata_path
+        self.size = size
+        self._q: queue.Queue = queue.Queue()
+        for _ in range(size):
+            self._q.put(MacroEnv(kata_dir=kata_path))
+
+    def step(self, defmacro: str, timeout: float = 30.0):
+        env = self._q.get(timeout=timeout)
         try:
-            _env_cache[oldest].close()
-        except Exception:
-            pass
-        del _env_cache[oldest]
-    _env_cache[kata_path] = MacroEnv(kata_dir=kata_path)
-    return _env_cache[kata_path]
+            return env.step(defmacro)
+        finally:
+            self._q.put(env)
+
+    def close(self) -> None:
+        while True:
+            try:
+                env = self._q.get_nowait()
+            except queue.Empty:
+                return
+            try:
+                env.close()
+            except Exception:
+                pass
+
+
+_pools: dict[str, _EnvPool] = {}
+_pools_lock = threading.Lock()
+
+
+def _get_pool(kata_path: str) -> _EnvPool:
+    """FIFO-evict whole pools when the cache fills."""
+    with _pools_lock:
+        if kata_path in _pools:
+            return _pools[kata_path]
+        if len(_pools) >= _ENV_CACHE_MAX:
+            oldest = next(iter(_pools))
+            _pools[oldest].close()
+            del _pools[oldest]
+        _pools[kata_path] = _EnvPool(kata_path, _POOL_PER_KATA)
+        return _pools[kata_path]
+
+
+def _close_all_pools() -> None:
+    with _pools_lock:
+        for p in _pools.values():
+            try:
+                p.close()
+            except Exception:
+                pass
+        _pools.clear()
 
 
 def _completion_to_text(completion) -> str:
@@ -227,11 +286,70 @@ def _completion_to_text(completion) -> str:
     return str(completion)
 
 
+# Mutable runtime state — updated by callbacks, read by reward fn for
+# sample dumping. See RuntimeControlCallback / SampleDumperCallback.
+_runtime: dict = {
+    "step":              0,
+    "log_samples_every": int(_env("LOG_SAMPLES_EVERY", "25")),
+    "sample_now":        False,
+    "n_samples_per_dump": int(_env("SAMPLES_PER_DUMP", "4")),
+    "output_dir":        Path(OUTPUT_DIR),
+}
+
+
+def _maybe_dump_samples(prompts, completions, kata_paths, rewards) -> None:
+    step  = _runtime["step"]
+    every = _runtime["log_samples_every"]
+    if not (_runtime["sample_now"] or (every > 0 and step > 0 and step % every == 0)):
+        return
+    _runtime["sample_now"] = False
+
+    n = min(_runtime["n_samples_per_dump"], len(completions))
+    if n <= 0:
+        return
+    idxs = random.sample(range(len(completions)), n)
+    out = _runtime["output_dir"] / f"samples-step-{step:05d}.jsonl"
+    try:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        with out.open("a", encoding="utf-8") as f:
+            for i in idxs:
+                text = _completion_to_text(completions[i])
+                f.write(json.dumps({
+                    "step":               step,
+                    "kata_path":          kata_paths[i] if kata_paths else None,
+                    "prompt":             prompts[i] if prompts else None,
+                    "completion":         text,
+                    "reward":             rewards[i],
+                    "defmacro_extracted": extract_defmacro(text),
+                }, ensure_ascii=False) + "\n")
+    except Exception as e:
+        print(f"  sample dump failed: {type(e).__name__}: {e}", file=sys.stderr)
+
+
+def _score_one(completion, kata_path) -> float:
+    text = _completion_to_text(completion)
+    defmacro = extract_defmacro(text)
+    if defmacro is None:
+        return -0.2
+    try:
+        pool = _get_pool(kata_path)
+        _obs, r, _done, _trunc, _info = pool.step(defmacro)
+        return max(-0.5, min(1.5, float(r)))
+    except Exception as e:
+        print(f"  reward err: {Path(kata_path).name}: {type(e).__name__}: {e}",
+              file=sys.stderr)
+        return -0.3
+
+
 def macro_gym_reward(prompts, completions, **kwargs) -> list[float]:
-    """GRPO reward callable. Per-completion:
+    """GRPO reward callable. Scores completions in parallel via a thread
+    pool — each kata has its own bag of SBCL subprocesses so multiple
+    students for the same kata can be scored concurrently. Per completion:
         1. extract (defmacro …) from text
-        2. submit to macro-gym MacroEnv.step
+        2. submit to a free env from the kata's pool
         3. clamp to [-0.5, 1.5] in case the env returns out-of-band values
+    Also writes a sample to OUTPUT_DIR/samples-step-NNN.jsonl every
+    LOG_SAMPLES_EVERY training steps (or when control.json sets sample_now).
     """
     kata_paths = kwargs.get("kata_path") or []
     if len(kata_paths) != len(completions):
@@ -240,23 +358,122 @@ def macro_gym_reward(prompts, completions, **kwargs) -> list[float]:
             f"{len(kata_paths)} kata_paths"
         )
 
-    rewards: list[float] = []
-    for completion, kata_path in zip(completions, kata_paths):
-        text = _completion_to_text(completion)
-        defmacro = extract_defmacro(text)
-        if defmacro is None:
-            rewards.append(-0.2)   # didn't even produce a balanced defmacro
-            continue
-        try:
-            env = _get_env(kata_path)
-            _obs, r, _done, _trunc, _info = env.step(defmacro)
-            rewards.append(max(-0.5, min(1.5, float(r))))
-        except Exception as e:
-            # Treat env errors as a mild penalty (likely model emitted
-            # something the SBCL server couldn't even parse).
-            print(f"  reward err: {Path(kata_path).name}: {type(e).__name__}: {e}", file=sys.stderr)
-            rewards.append(-0.3)
+    n = len(completions)
+    rewards: list[float] = [0.0] * n
+    if n == 0:
+        return rewards
+
+    workers = min(_REWARD_WORKERS, n)
+    if workers <= 1:
+        for i in range(n):
+            rewards[i] = _score_one(completions[i], kata_paths[i])
+    else:
+        with ThreadPoolExecutor(max_workers=workers,
+                                thread_name_prefix="sbcl-reward") as ex:
+            futs = {ex.submit(_score_one, completions[i], kata_paths[i]): i
+                    for i in range(n)}
+            for fut in futs:
+                rewards[futs[fut]] = fut.result()
+
+    _maybe_dump_samples(prompts, completions, kata_paths, rewards)
     return rewards
+
+
+# ─── runtime control plane ────────────────────────────────────────────
+#
+# Three files under OUTPUT_DIR let me tune the run from a different shell
+# without holding an SSH session open:
+#
+#   metrics.jsonl              — appended every log step (loss/reward/kl/…)
+#   samples-step-NNN.jsonl     — 4 rollouts every LOG_SAMPLES_EVERY steps
+#                                (see _maybe_dump_samples in the reward fn)
+#   control.json               — polled at on_step_begin; recognised keys:
+#                                  stop:      true  → checkpoint + clean exit
+#                                  save_now:  true  → force a checkpoint write
+#                                  sample_now:true  → dump samples on next batch
+#                                  temperature: f   → swap rollout temperature
+#                                  log_samples_every: int → change cadence
+
+class MetricsLoggerCallback(TrainerCallback):
+    """Append every set of logged metrics to OUTPUT_DIR/metrics.jsonl."""
+
+    def __init__(self, metrics_path: Path):
+        self.path = metrics_path
+
+    def on_log(self, args, state, control, logs=None, **kw):
+        if not logs:
+            return
+        try:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            with self.path.open("a", encoding="utf-8") as f:
+                f.write(json.dumps({"step": state.global_step, **logs}) + "\n")
+        except Exception as e:
+            print(f"  metrics log failed: {type(e).__name__}: {e}", file=sys.stderr)
+
+
+class RuntimeControlCallback(TrainerCallback):
+    """Poll control.json each step; honour stop/save_now/sample_now/etc.
+
+    Re-reads only when the file's mtime changes — cheap and chatter-free.
+    """
+
+    def __init__(self, ctl_path: Path, trainer_args):
+        self.ctl_path = ctl_path
+        self.trainer_args = trainer_args
+        self._last_mtime: float = 0.0
+
+    def _read(self) -> dict | None:
+        try:
+            if not self.ctl_path.exists():
+                return None
+            m = self.ctl_path.stat().st_mtime
+            if m == self._last_mtime:
+                return None
+            self._last_mtime = m
+            return json.loads(self.ctl_path.read_text())
+        except Exception as e:
+            print(f"  control.json read failed: {type(e).__name__}: {e}",
+                  file=sys.stderr)
+            return None
+
+    def on_step_begin(self, args, state, control, **kw):
+        # Keep _runtime["step"] fresh so the reward fn can name sample files.
+        _runtime["step"] = state.global_step
+
+        ctl = self._read()
+        if ctl is None:
+            return control
+
+        if ctl.get("stop"):
+            print(f"[control] stop requested at step {state.global_step}; "
+                  f"checkpointing and exiting cleanly", file=sys.stderr)
+            control.should_save = True
+            control.should_training_stop = True
+        if ctl.get("save_now"):
+            print(f"[control] save_now requested at step {state.global_step}",
+                  file=sys.stderr)
+            control.should_save = True
+        if ctl.get("sample_now"):
+            print(f"[control] sample_now requested at step {state.global_step}",
+                  file=sys.stderr)
+            _runtime["sample_now"] = True
+        if "log_samples_every" in ctl:
+            try:
+                _runtime["log_samples_every"] = int(ctl["log_samples_every"])
+                print(f"[control] log_samples_every = "
+                      f"{_runtime['log_samples_every']}", file=sys.stderr)
+            except (TypeError, ValueError):
+                pass
+        if "temperature" in ctl:
+            try:
+                t = float(ctl["temperature"])
+                # GRPOConfig.temperature is read at rollout time on most TRL
+                # versions; mutating args.temperature is best-effort.
+                self.trainer_args.temperature = t
+                print(f"[control] temperature = {t}", file=sys.stderr)
+            except (TypeError, ValueError):
+                pass
+        return control
 
 
 # ─── baseline-only mode ───────────────────────────────────────────────
@@ -402,6 +619,20 @@ def main() -> int:
         grpo_kwargs["unsloth_logit_chunk_multiplier"] = int(UNSLOTH_LOGIT_CHUNK_MULTIPLIER)
     config = GRPOConfig(**grpo_kwargs)
 
+    # Make sure the reward fn writes sample dumps next to the actual run.
+    _runtime["output_dir"] = Path(OUTPUT_DIR)
+
+    metrics_path = Path(OUTPUT_DIR) / "metrics.jsonl"
+    control_path = Path(OUTPUT_DIR) / "control.json"
+    callbacks = [
+        MetricsLoggerCallback(metrics_path),
+        RuntimeControlCallback(control_path, config),
+    ]
+    print(f"  metrics → {metrics_path}")
+    print(f"  control ← {control_path}  (edit this file to tune at runtime)")
+    print(f"  samples → {OUTPUT_DIR}/samples-step-NNN.jsonl  "
+          f"(every {_runtime['log_samples_every']} steps)")
+
     trainer = GRPOTrainer(
         model=model,
         processing_class=tokenizer,
@@ -409,10 +640,19 @@ def main() -> int:
         args=config,
         train_dataset=train_ds,
         eval_dataset=eval_ds,
+        callbacks=callbacks,
     )
 
+    # Resume from the latest checkpoint if one exists — survives OOM /
+    # pod restart without losing prior progress.
+    resume = False
+    out_path = Path(OUTPUT_DIR)
+    if out_path.exists() and any(out_path.glob("checkpoint-*")):
+        resume = True
+        print(f"  resuming from latest checkpoint under {OUTPUT_DIR}")
+
     print("\n=== Starting GRPO training ===")
-    train_result = trainer.train()
+    train_result = trainer.train(resume_from_checkpoint=resume)
 
     # Save final adapter to disk
     final_dir = Path(OUTPUT_DIR) / "final_adapter"
@@ -421,12 +661,7 @@ def main() -> int:
     tokenizer.save_pretrained(str(final_dir))
 
     # Tidy up env subprocesses
-    for env in _env_cache.values():
-        try:
-            env.close()
-        except Exception:
-            pass
-    _env_cache.clear()
+    _close_all_pools()
 
     print("\n=== Training summary ===")
     print(f"Final adapter: {final_dir}")

@@ -31,7 +31,11 @@ fail() { printf '\n\033[1;31m[GATE FAIL] %s\033[0m\n' "$*" >&2; exit 1; }
 # ─── Gate A: prerequisites ─────────────────────────────────────────────
 step "Gate A: prerequisites"
 [[ -n "${HF_TOKEN:-}" ]]              || fail "HF_TOKEN not set"
-command -v sbcl       >/dev/null     || fail "sbcl not on PATH (apt-get install -y sbcl)"
+if ! command -v sbcl >/dev/null; then
+    echo "  sbcl missing — invoking install_sbcl.sh"
+    bash "$REPO_ROOT/scripts/cloud/install_sbcl.sh" || fail "install_sbcl.sh failed"
+fi
+command -v sbcl       >/dev/null     || fail "sbcl still not on PATH after install_sbcl.sh"
 python -c "import macro_gym"          2>/dev/null || \
     pip install --quiet "git+https://github.com/jborkowski/macro-gym" || \
     fail "macro-gym install failed"
