@@ -183,3 +183,63 @@ credits.
   fresh boot.
 - If a pod really does get orphaned: `runpodctl pod list` to find it,
   `runpodctl pod delete <id>` to kill it.
+
+---
+
+## 8. Detached pipeline can't find a script that was committed mid-run
+
+**Symptom.** The pod's `full_pipeline.sh` runs train → upload → postprocess
+sequentially. Training succeeds, upload succeeds, then:
+
+```
+python: can't open file '/workspace/cl-macro-llm/scripts/cloud/postprocess.py':
+        [Errno 2] No such file or directory
+postprocess.py rc=2
+```
+
+Watcher marks `POSTPROCESS_FAILED_BUT_ADAPTER_OK` and deletes the pod. The
+adapter is on HF (good), but the merged / GGUF artifacts were never built
+because their script wasn't on the pod yet.
+
+**Why.** The detached pipeline did a single `git pull --ff-only` at the
+moment it was launched on the pod. Any commits pushed to `origin/main` **after**
+that initial pull (postprocess.py, to_mlx.sh, etc.) never landed on the pod —
+the pipeline script just doesn't re-pull between phases. So a long-running
+detached pipeline is effectively running a snapshot of the repo from when it
+was first launched, even if you push fixes in parallel.
+
+**Fix (workflow).** Don't commit code changes that the in-flight pipeline
+will reach later. Push everything you need (training, upload, postprocess,
+all helper scripts) **before** kicking off `setsid nohup full_pipeline.sh`.
+Treat the launch as a release tag for that run.
+
+**Fix (script).** When generating `full_pipeline.sh` on the pod, either:
+
+```bash
+# Option A: pull before each phase
+cd /workspace/cl-macro-llm
+git pull --ff-only || true
+python scripts/cloud/upload_to_hf.py
+git pull --ff-only || true
+python scripts/cloud/postprocess.py
+```
+
+```bash
+# Option B (safer): snapshot scripts once at pipeline start
+cp -r /workspace/cl-macro-llm/scripts /workspace/scripts-snapshot
+# ... then run from /workspace/scripts-snapshot/cloud/* throughout
+```
+
+Option B is more robust because mid-pipeline `git pull` could pull in a
+breaking change too. Snapshot once at launch → run that snapshot to
+completion → mid-run pushes only affect the NEXT pipeline launch.
+
+**Recovery if it already happened.** The adapter is safe on HF; the merged
+and GGUF variants are not. Two paths:
+
+1. **Skip them.** Adapter is what most downstream uses need (PEFT load on
+   top of base). MLX conversion can be done on a Mac via `mlx_lm.convert`
+   pointing directly at the base model + adapter, no merged repo needed.
+2. **Re-run postprocess on a fresh pod.** Cheaper to use a smaller GPU (the
+   merge + push doesn't need an A100 — even an L4 would do). Just:
+   `python scripts/cloud/postprocess.py` with the same env vars.
