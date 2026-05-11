@@ -68,6 +68,15 @@ if [[ -z "${HF_REPO:-}" && -z "${KEEP_POD:-}" ]]; then
     fail "HF_REPO is unset AND KEEP_POD is unset — adapter would be destroyed with the pod. Set HF_REPO in .env, or export KEEP_POD=1 to keep the pod alive."
 fi
 
+# PHASE=grpo runs the trainer detached in a tmux session on the pod, so the
+# SSH command returns immediately. Without KEEP_POD=1 the cleanup trap would
+# tear the pod down while the trainer is still running. Force it.
+if [[ "${PHASE:-sft}" == "grpo" && -z "${KEEP_POD:-}" ]]; then
+    warn "PHASE=grpo — auto-setting KEEP_POD=1 so the trainer survives SSH detach."
+    warn "  Tear down manually when training is done: runpodctl pod delete \$POD_ID"
+    export KEEP_POD=1
+fi
+
 # ── 5. Boot pod ─────────────────────────────────────────────────────
 POD_NAME="cl-macro-sft-$(date +%s)"
 # Default to a small pytorch image (~5 GB, fast pull on community cloud).
@@ -189,11 +198,78 @@ for var in HF_REPO WANDB_API_KEY WANDB_ENTITY BASE_MODEL DATASET MAX_SEQ_LENGTH 
 export $var='$val'"
 done
 
-step "Running training pipeline on pod"
-ssh -i "$SSH_KEY" \
-    -o IdentitiesOnly=yes \
-    -o StrictHostKeyChecking=accept-new \
-    -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" bash -ls <<EOF
+if [[ "${PHASE:-sft}" == "grpo" ]]; then
+    # ── GRPO path: detach into pod-side tmux session 'grpo' ────────────
+    # The bootstrap script holds the env exports and the run command. We
+    # write it on the pod with mode 600 so $HF_TOKEN isn't world-readable,
+    # then launch it inside tmux on the pod so it survives SSH detach. The
+    # trailing `sleep infinity` keeps the tmux pane attachable after
+    # run.sh exits, so you can tmux-attach and see the final output.
+    step "Launching GRPO pipeline in detached tmux on pod"
+    ssh -i "$SSH_KEY" \
+        -o IdentitiesOnly=yes \
+        -o StrictHostKeyChecking=accept-new \
+        -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" bash -ls <<EOF
+set -e
+mkdir -p /workspace
+command -v tmux >/dev/null 2>&1 || {
+    echo "  installing tmux..."
+    apt-get update -qq && apt-get install -y -qq tmux
+}
+umask 077
+cat > /workspace/grpo-bootstrap.sh <<'BOOT'
+#!/bin/bash
+set -e
+$ENV_EXPORTS
+cd /workspace
+if [[ ! -d cl-macro-llm ]]; then
+    git clone https://github.com/jborkowski/cl-macro-llm.git
+fi
+cd cl-macro-llm
+git pull --ff-only || true
+exec bash scripts/cloud/run.sh
+BOOT
+chmod 600 /workspace/grpo-bootstrap.sh
+# Kill stale 'grpo' session if it exists — fresh start each launch.
+tmux kill-session -t grpo 2>/dev/null || true
+tmux new-session -d -s grpo "bash /workspace/grpo-bootstrap.sh 2>&1 | tee /workspace/grpo-launch.log; echo; echo '[run.sh exited \$?]'; sleep infinity"
+echo "  tmux sessions on pod:"
+tmux ls
+EOF
+
+    # Print monitor + teardown commands, including a local-tmux split-window
+    # variant the user can paste when they're already in local tmux.
+    step "GRPO trainer detached. Pod $POD_ID stays up (KEEP_POD=1)."
+    SSH_CMD="ssh -i $SSH_KEY -o IdentitiesOnly=yes -p $SSH_PORT $SSH_USER@$SSH_HOST"
+    cat <<INSTR
+
+  Live watch (local tmux split, recommended — paste in your local tmux):
+    tmux split-window -v "$SSH_CMD 'cd /workspace/cl-macro-llm && uv run scripts/cloud/alive_loop.py'"
+
+  Or attach to the pod's tmux session directly:
+    $SSH_CMD -t tmux attach -t grpo
+
+  One-shot status tick (read-only, ~2s):
+    $SSH_CMD 'cd /workspace/cl-macro-llm && uv run scripts/cloud/alive_loop.py --once'
+
+  Tail the launch log:
+    $SSH_CMD 'tail -f /workspace/grpo-launch.log'
+
+  Tear down when training is done:
+    runpodctl pod delete $POD_ID
+
+INSTR
+    # Helpful nudge if launch.sh itself is running inside a local tmux:
+    if [[ -n "${TMUX:-}" ]]; then
+        echo "  (you're in local tmux — the split-window line above will work as-is)"
+    fi
+else
+    # ── SFT path (unchanged): foreground pipeline over SSH ────────────
+    step "Running training pipeline on pod"
+    ssh -i "$SSH_KEY" \
+        -o IdentitiesOnly=yes \
+        -o StrictHostKeyChecking=accept-new \
+        -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" bash -ls <<EOF
 set -e
 $ENV_EXPORTS
 mkdir -p /workspace
@@ -206,5 +282,6 @@ git pull --ff-only || true
 bash scripts/cloud/run.sh
 EOF
 
-step "Done — training run finished."
-[[ -n "${HF_REPO:-}" ]] && echo "  adapter on HF: https://huggingface.co/$HF_REPO"
+    step "Done — training run finished."
+    [[ -n "${HF_REPO:-}" ]] && echo "  adapter on HF: https://huggingface.co/$HF_REPO"
+fi
