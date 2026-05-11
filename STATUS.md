@@ -67,10 +67,34 @@ What the model got right:
 - Idiomatic structure: `(values elapsed result)`, `float` coercion
 - Correct constant: `internal-time-units-per-second`
 
-What the model got wrong:
+What the model got wrong (in 4-bit MLX):
 - Hallucinated function name `internal-real-time` (correct CL name is
   `get-internal-real-time`). Manual one-line fix, otherwise the macro was
   structurally correct.
+
+**Follow-up: this hallucination was a quantization artifact, not baked
+into SFT weights.** Re-running the same prompt against the **bf16 MLX**
+version (`~/models/cl-macro-27b-lora-mlx-bf16`, ~50 GB, 9.4 tok/s, 54 GB
+peak memory) produced the correct `get-internal-real-time` 26 times,
+including this explicit self-correction in the model's thinking trace:
+
+> "The prompt says 'internal-real-time', which might be a shorthand.
+>  I'll use `get-internal-real-time`."
+
+The bf16-generated macro ran in SBCL on the first try, **no manual fix
+needed**.
+
+**Implications:**
+
+- For final / production / single-shot macro generation: prefer **bf16
+  MLX** (or merged HF on a GPU). Slower (9 vs 33 tok/s) but
+  CL-function-name accurate.
+- For fast iteration, exploration, drafts where you'll review anyway:
+  **4-bit MLX** is fine — 3.5× faster, 3.5× less memory, occasional
+  function-name hallucinations are easy to spot.
+- Worth trying intermediate quants (5-bit, group_size 32) to see if
+  there's a sweet spot that keeps speed without losing function-name
+  precision.
 
 ## What this means for downstream use
 
