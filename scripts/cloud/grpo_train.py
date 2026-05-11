@@ -618,6 +618,18 @@ def main() -> int:
         delta=DELTA,
         mask_truncated_completions=MASK_TRUNCATED_COMPLETIONS,
     )
+    # Durable checkpoints via HF Hub — survives pod death without a network
+    # volume. Trainer pushes a `last-checkpoint` branch on every save_steps
+    # (~600 MB LoRA × 20-30s upload — negligible vs the GRPO step time).
+    if HF_REPO and os.environ.get("HF_TOKEN"):
+        grpo_kwargs.update(
+            push_to_hub=True,
+            hub_model_id=HF_REPO,
+            hub_strategy="checkpoint",
+            hub_token=os.environ["HF_TOKEN"],
+            hub_private_repo=False,
+        )
+        print(f"  HF Hub checkpointing → {HF_REPO} (last-checkpoint branch every {grpo_kwargs['save_steps']} steps)")
     if UNSLOTH_GRPO_MINI_BATCH:
         grpo_kwargs["unsloth_grpo_mini_batch"] = int(UNSLOTH_GRPO_MINI_BATCH)
     if UNSLOTH_LOGIT_CHUNK_MULTIPLIER:
