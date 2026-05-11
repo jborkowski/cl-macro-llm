@@ -133,7 +133,13 @@ def _maybe_init_wandb() -> bool:
 # ─── kata loading ─────────────────────────────────────────────────────
 
 def load_katas(kata_root: Path) -> Dataset:
-    """Walk kata directory tree (cl-ds/* + creative/*), emit prompt+meta rows."""
+    """Walk kata directory tree (cl-ds/* + creative/*), emit prompt+meta rows.
+
+    Side effect: symlinks each kata into macro_gym.env.KATAS_DIR so
+    MacroEnv(kata_id=...) can find it. macro-gym's `KATAS_DIR` is module-
+    level and hardcoded to <package_dir>/../katas, so we shim it via
+    symlinks rather than monkey-patching the module global.
+    """
     rows = []
     candidates = []
     # Two-level walk: top-level kata dirs OR nested under cl-ds/, creative/
@@ -146,6 +152,31 @@ def load_katas(kata_root: Path) -> Dataset:
             for sub in p.iterdir():
                 if sub.is_dir() and (sub / "metadata.json").exists():
                     candidates.append(sub)
+
+    # Symlink katas into macro-gym's KATAS_DIR. Idempotent — re-runs just
+    # refresh the links. Skips dirs that don't have the files MacroEnv
+    # needs (setup.lisp + tests.lisp), to avoid load_kata() failures later.
+    try:
+        import macro_gym.env as _mg
+        _mg.KATAS_DIR.mkdir(parents=True, exist_ok=True)
+        n_linked = 0
+        for kata_dir in candidates:
+            if not (kata_dir / "setup.lisp").exists() or \
+               not (kata_dir / "tests.lisp").exists():
+                continue
+            link = _mg.KATAS_DIR / kata_dir.name
+            if link.is_symlink():
+                if link.resolve() == kata_dir.resolve():
+                    continue
+                link.unlink()
+            elif link.exists():
+                continue  # don't clobber a real dir (e.g., bundled samples)
+            link.symlink_to(kata_dir.resolve())
+            n_linked += 1
+        print(f"  symlinked {n_linked} katas into {_mg.KATAS_DIR}")
+    except Exception as e:
+        print(f"  warning: macro-gym kata symlink setup failed: {type(e).__name__}: {e}",
+              file=sys.stderr)
 
     for kata_dir in sorted(candidates):
         meta = json.loads((kata_dir / "metadata.json").read_text())
@@ -222,19 +253,30 @@ _REWARD_WORKERS       = int(_env("SBCL_REWARD_WORKERS", "16"))
 
 
 class _EnvPool:
-    """Per-kata bag of MacroEnv handles, checked out via a thread-safe queue."""
+    """Per-kata bag of MacroEnv handles, checked out via a thread-safe queue.
 
-    def __init__(self, kata_path: str, size: int):
+    Newer macro-gym (post-Phase-2-design) takes `kata_id` (string) instead
+    of `kata_dir` (path), and resolves it against `macro_gym.env.KATAS_DIR`.
+    We symlink our /workspace/katas/* into that dir at startup (see
+    load_katas) so kata IDs resolve correctly.
+    """
+
+    def __init__(self, kata_id: str, size: int):
         from macro_gym import MacroEnv  # lazy import
-        self.kata_path = kata_path
+        self.kata_id = kata_id
         self.size = size
         self._q: queue.Queue = queue.Queue()
         for _ in range(size):
-            self._q.put(MacroEnv(kata_dir=kata_path))
+            env = MacroEnv(kata_id=kata_id)
+            env.reset()  # loads setup.lisp + tests.lisp; spawns SBCL service
+            self._q.put(env)
 
     def step(self, defmacro: str, timeout: float = 30.0):
         env = self._q.get(timeout=timeout)
         try:
+            # Reset clears _step_count / _prev_results from any prior use,
+            # so each scored completion starts from a clean state.
+            env.reset()
             return env.step(defmacro)
         finally:
             self._q.put(env)
@@ -255,17 +297,17 @@ _pools: dict[str, _EnvPool] = {}
 _pools_lock = threading.Lock()
 
 
-def _get_pool(kata_path: str) -> _EnvPool:
+def _get_pool(kata_id: str) -> _EnvPool:
     """FIFO-evict whole pools when the cache fills."""
     with _pools_lock:
-        if kata_path in _pools:
-            return _pools[kata_path]
+        if kata_id in _pools:
+            return _pools[kata_id]
         if len(_pools) >= _ENV_CACHE_MAX:
             oldest = next(iter(_pools))
             _pools[oldest].close()
             del _pools[oldest]
-        _pools[kata_path] = _EnvPool(kata_path, _POOL_PER_KATA)
-        return _pools[kata_path]
+        _pools[kata_id] = _EnvPool(kata_id, _POOL_PER_KATA)
+        return _pools[kata_id]
 
 
 def _close_all_pools() -> None:
@@ -302,7 +344,7 @@ _runtime: dict = {
 }
 
 
-def _maybe_dump_samples(prompts, completions, kata_paths, rewards) -> None:
+def _maybe_dump_samples(prompts, completions, kata_ids, rewards) -> None:
     step  = _runtime["step"]
     every = _runtime["log_samples_every"]
     if not (_runtime["sample_now"] or (every > 0 and step > 0 and step % every == 0)):
@@ -321,7 +363,7 @@ def _maybe_dump_samples(prompts, completions, kata_paths, rewards) -> None:
                 text = _completion_to_text(completions[i])
                 f.write(json.dumps({
                     "step":               step,
-                    "kata_path":          kata_paths[i] if kata_paths else None,
+                    "kata_id":            kata_ids[i] if kata_ids else None,
                     "prompt":             prompts[i] if prompts else None,
                     "completion":         text,
                     "reward":             rewards[i],
@@ -331,17 +373,17 @@ def _maybe_dump_samples(prompts, completions, kata_paths, rewards) -> None:
         print(f"  sample dump failed: {type(e).__name__}: {e}", file=sys.stderr)
 
 
-def _score_one(completion, kata_path) -> float:
+def _score_one(completion, kata_id) -> float:
     text = _completion_to_text(completion)
     defmacro = extract_defmacro(text)
     if defmacro is None:
         return -0.2
     try:
-        pool = _get_pool(kata_path)
+        pool = _get_pool(kata_id)
         _obs, r, _done, _trunc, _info = pool.step(defmacro)
         return max(-0.5, min(1.5, float(r)))
     except Exception as e:
-        print(f"  reward err: {Path(kata_path).name}: {type(e).__name__}: {e}",
+        print(f"  reward err: {kata_id}: {type(e).__name__}: {e}",
               file=sys.stderr)
         return -0.3
 
@@ -356,11 +398,13 @@ def macro_gym_reward(prompts, completions, **kwargs) -> list[float]:
     Also writes a sample to OUTPUT_DIR/samples-step-NNN.jsonl every
     LOG_SAMPLES_EVERY training steps (or when control.json sets sample_now).
     """
-    kata_paths = kwargs.get("kata_path") or []
-    if len(kata_paths) != len(completions):
+    # kata_id is the dataset column; macro-gym resolves it against
+    # macro_gym.env.KATAS_DIR (set up by load_katas symlinks).
+    kata_ids = kwargs.get("kata_id") or []
+    if len(kata_ids) != len(completions):
         raise RuntimeError(
             f"reward fn: got {len(completions)} completions but "
-            f"{len(kata_paths)} kata_paths"
+            f"{len(kata_ids)} kata_ids"
         )
 
     n = len(completions)
@@ -371,16 +415,16 @@ def macro_gym_reward(prompts, completions, **kwargs) -> list[float]:
     workers = min(_REWARD_WORKERS, n)
     if workers <= 1:
         for i in range(n):
-            rewards[i] = _score_one(completions[i], kata_paths[i])
+            rewards[i] = _score_one(completions[i], kata_ids[i])
     else:
         with ThreadPoolExecutor(max_workers=workers,
                                 thread_name_prefix="sbcl-reward") as ex:
-            futs = {ex.submit(_score_one, completions[i], kata_paths[i]): i
+            futs = {ex.submit(_score_one, completions[i], kata_ids[i]): i
                     for i in range(n)}
             for fut in futs:
                 rewards[futs[fut]] = fut.result()
 
-    _maybe_dump_samples(prompts, completions, kata_paths, rewards)
+    _maybe_dump_samples(prompts, completions, kata_ids, rewards)
     return rewards
 
 
@@ -514,7 +558,7 @@ def _run_baseline(model, tokenizer, eval_ds) -> int:
         r = macro_gym_reward(
             prompts=[row["prompt"]],
             completions=[completion],
-            kata_path=[row["kata_path"]],
+            kata_id=[row["kata_id"]],
         )[0]
         rewards.append(r)
         if (i + 1) % 10 == 0 or i + 1 == n:
