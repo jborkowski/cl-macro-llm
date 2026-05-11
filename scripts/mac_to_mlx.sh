@@ -85,6 +85,18 @@ print("  Merge done.")
 PY
 fi
 
+# PEFT-merge of a multimodal qwen3_5 base saves the text-only sub-config
+# with model_type "qwen3_5_text", which mlx-lm doesn't recognise. The
+# architecture is identical (Qwen3_5ForCausalLM); we just have to rename
+# the model_type back to "qwen3_5" so mlx-lm routes to its handler.
+if [[ -f "$MERGED_DIR/config.json" ]] && grep -q '"model_type": "qwen3_5_text"' "$MERGED_DIR/config.json"; then
+    step "2.5/3  Patching merged config.json model_type qwen3_5_text -> qwen3_5"
+    cp "$MERGED_DIR/config.json" "$MERGED_DIR/config.json.bak"
+    sed -i.tmp 's/"model_type": "qwen3_5_text"/"model_type": "qwen3_5"/' "$MERGED_DIR/config.json"
+    rm -f "$MERGED_DIR/config.json.tmp"
+    echo "  patched. backup at $MERGED_DIR/config.json.bak"
+fi
+
 step "3/3  Quantizing to MLX 4-bit ($MERGED_DIR -> $MLX_DIR)"
 if [[ -d "$MLX_DIR" && -f "$MLX_DIR/config.json" ]]; then
     echo "  MLX dir already exists, skipping convert: $MLX_DIR"
