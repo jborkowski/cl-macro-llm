@@ -528,21 +528,49 @@ class RuntimeControlCallback(TrainerCallback):
 # ─── baseline-only mode ───────────────────────────────────────────────
 
 def _run_baseline(model, tokenizer, eval_ds) -> int:
-    """Greedy-ish single rollout per eval kata; report mean reward,
-    compile rate (>0), and full-credit rate (>=0.99). Gate C consumer
-    parses the `baseline_mean=` line.
+    """Batched baseline: generate BASELINE_BATCH prompts at once on GPU,
+    then score the whole batch in parallel via macro_gym_reward (which
+    uses the threadpool of SBCLs).
+
+    Was serial (1 prompt → 1 reward call → 1 SBCL active at a time).
+    Now: batch_size prompts go through model.generate as one batched
+    inference call, and the resulting N completions are scored in
+    parallel across N SBCLs from the per-kata pools — saturating both
+    GPU and the SBCL pool instead of leaving one idle while the other
+    works.
+
+    Gate C consumer parses the `baseline_mean=` line.
     """
     FastLanguageModel.for_inference(model)
     rewards: list[float] = []
     n = len(eval_ds)
-    print(f"\n=== Baseline rollout over {n} eval katas ===")
-    for i, row in enumerate(eval_ds):
-        prompt_text = tokenizer.apply_chat_template(
-            row["prompt"], tokenize=False, add_generation_prompt=True
-        )
-        # Qwen3.6 tokenizer is actually Qwen3VLProcessor — passing the prompt
-        # positionally makes it think the text is an image_url. Force `text=`.
-        inputs = tokenizer(text=prompt_text, return_tensors="pt").to(model.device)
+    batch_size = int(_env("BASELINE_BATCH", "8"))
+    print(f"\n=== Baseline rollout over {n} eval katas "
+          f"(batch_size={batch_size}) ===")
+
+    # Qwen3.6's processor pads on the right by default which corrupts
+    # autoregressive decoding for the first sample in the batch. Force
+    # left-padding so each generation starts at the same logical position.
+    if hasattr(tokenizer, "padding_side"):
+        tokenizer.padding_side = "left"
+
+    pad_token_id = (tokenizer.pad_token_id
+                    or tokenizer.eos_token_id)
+
+    for batch_start in range(0, n, batch_size):
+        batch_end = min(batch_start + batch_size, n)
+        batch_rows = [eval_ds[i] for i in range(batch_start, batch_end)]
+
+        prompt_texts = [
+            tokenizer.apply_chat_template(
+                r["prompt"], tokenize=False, add_generation_prompt=True
+            ) for r in batch_rows
+        ]
+        # Qwen3.6 tokenizer is Qwen3VLProcessor — force text= kwarg.
+        inputs = tokenizer(
+            text=prompt_texts, return_tensors="pt", padding=True,
+        ).to(model.device)
+
         with torch.inference_mode():
             out = model.generate(
                 **inputs,
@@ -550,20 +578,26 @@ def _run_baseline(model, tokenizer, eval_ds) -> int:
                 do_sample=True,
                 temperature=TEMPERATURE,
                 top_p=0.95,
-                pad_token_id=tokenizer.eos_token_id or tokenizer.pad_token_id,
+                pad_token_id=pad_token_id,
             )
-        completion = tokenizer.decode(
-            out[0, inputs.input_ids.shape[1]:], skip_special_tokens=True
+
+        # Slice off the prompt portion of each sequence in the batch.
+        prompt_len = inputs.input_ids.shape[1]
+        completions = [
+            tokenizer.decode(out[j, prompt_len:], skip_special_tokens=True)
+            for j in range(len(batch_rows))
+        ]
+
+        batch_rewards = macro_gym_reward(
+            prompts=[r["prompt"]   for r in batch_rows],
+            completions=completions,
+            kata_id=[r["kata_id"] for r in batch_rows],
         )
-        r = macro_gym_reward(
-            prompts=[row["prompt"]],
-            completions=[completion],
-            kata_id=[row["kata_id"]],
-        )[0]
-        rewards.append(r)
-        if (i + 1) % 10 == 0 or i + 1 == n:
-            running = statistics.fmean(rewards)
-            print(f"  [{i + 1:>4d}/{n}] running mean={running:+.4f}")
+        rewards.extend(batch_rewards)
+
+        # Print progress at batch boundaries.
+        running = statistics.fmean(rewards)
+        print(f"  [{batch_end:>4d}/{n}] running mean={running:+.4f}")
 
     if not rewards:
         print("baseline_mean=0.0")
