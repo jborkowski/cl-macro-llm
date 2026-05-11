@@ -36,12 +36,26 @@ warn() { printf '\033[1;33m!! %s\033[0m\n' "$*" >&2; }
 fail() { printf '\033[1;31mxx %s\033[0m\n' "$*" >&2; exit 1; }
 
 step "1/5  Installing python requirements (Unsloth from image; pip-installing direct deps)"
+# If /workspace is a RunPod network volume, route HF model cache + pip
+# wheel cache there so they survive pod recreation. Saves ~10-15 min per
+# subsequent boot once the base model and wheels are seeded.
+if [[ -d /workspace && -w /workspace ]]; then
+    export HF_HOME="${HF_HOME:-/workspace/.cache/huggingface}"
+    export PIP_CACHE_DIR="${PIP_CACHE_DIR:-/workspace/.cache/pip}"
+    mkdir -p "$HF_HOME" "$PIP_CACHE_DIR"
+    echo "  HF_HOME=$HF_HOME"
+    echo "  PIP_CACHE_DIR=$PIP_CACHE_DIR"
+fi
+# Drop --no-cache-dir when PIP_CACHE_DIR is set: caching wheels on the
+# volume is the entire point of the network-volume optimization.
+NO_CACHE_FLAG="--no-cache-dir"
+[[ -n "${PIP_CACHE_DIR:-}" ]] && NO_CACHE_FLAG=""
 # When launched via the official Unsloth template (pzr9tt3vvq), unsloth +
 # unsloth_zoo + a verified torch/CUDA combo are baked into the image — we
 # skip the --force-reinstall to avoid breaking that. Direct deps still need pip.
 python -c "import unsloth" 2>/dev/null \
     && echo "  unsloth already installed: $(python -c 'import unsloth; print(unsloth.__version__)')" \
-    || pip install --upgrade --force-reinstall --no-cache-dir unsloth unsloth_zoo
+    || pip install --upgrade --force-reinstall $NO_CACHE_FLAG unsloth unsloth_zoo
 pip install -r scripts/cloud/requirements.txt -q
 
 # Best-effort: fast kernels for Qwen3.6's Gated DeltaNet layers (3 of every
@@ -55,14 +69,25 @@ pip install -r scripts/cloud/requirements.txt -q
 # before the install. The CUDA 12.4 nvcc vs torch 12.8 CUDA libs minor-
 # version mismatch is tolerated. See TROUBLESHOOTING.md §1.
 echo "  -- optional: fast DeltaNet kernels (best-effort, ~5-10 min if they build) --"
-if [[ -x /usr/local/cuda-12.4/bin/nvcc ]]; then
-    export PATH=/usr/local/cuda-12.4/bin:$PATH
-    export CUDA_HOME=/usr/local/cuda-12.4
-elif [[ -x /usr/local/cuda/bin/nvcc ]]; then
-    export PATH=/usr/local/cuda/bin:$PATH
-    export CUDA_HOME=/usr/local/cuda
+# Find the newest CUDA toolkit on the image and put its nvcc on PATH.
+# Required for source-building causal-conv1d. The cu1281 image has CUDA
+# 12.8 (sm_120 / Blackwell-capable); older images have 12.4 (A100/H100).
+for d in /usr/local/cuda-12.8 /usr/local/cuda-12.6 /usr/local/cuda-12.4 /usr/local/cuda; do
+    if [[ -x "$d/bin/nvcc" ]]; then
+        export PATH="$d/bin:$PATH"
+        export CUDA_HOME="$d"
+        echo "  using nvcc at $d/bin/nvcc ($($d/bin/nvcc --version | tail -1))"
+        break
+    fi
+done
+# Detect GPU arch at runtime and target it precisely (smaller wheel, faster
+# build). Falls back to a broad list covering A100 / H100 / Blackwell.
+if command -v nvidia-smi >/dev/null 2>&1; then
+    GPU_CAP=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader | head -1 | tr -d ' ')
+    [[ -n "$GPU_CAP" ]] && echo "  detected GPU compute capability: $GPU_CAP"
 fi
-export TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST:-8.0}"   # A100=8.0 H100=9.0
+export TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST:-${GPU_CAP:-8.0;9.0;12.0}}"
+echo "  TORCH_CUDA_ARCH_LIST=$TORCH_CUDA_ARCH_LIST"
 export MAX_JOBS="${MAX_JOBS:-4}"
 
 python -c "import fla" 2>/dev/null \

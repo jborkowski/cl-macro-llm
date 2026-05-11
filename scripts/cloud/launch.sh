@@ -124,6 +124,19 @@ CREATE_ARGS=(
     --cloud-type "$CLOUD_TYPE"
     --env "$ENV_JSON"
 )
+# Attach an existing RunPod network volume if NETWORK_VOLUME_ID is set.
+# When attached, /workspace becomes the volume mount (persistent across pod
+# recreations). Caches HF model + pip wheels + checkpoints across boots.
+if [[ -n "${NETWORK_VOLUME_ID:-}" ]]; then
+    CREATE_ARGS+=(--network-volume-id "$NETWORK_VOLUME_ID")
+    echo "  attaching network volume: $NETWORK_VOLUME_ID"
+fi
+# Pin the pod to a specific datacenter — required when using a network
+# volume (volumes are DC-bound), useful for stock targeting otherwise.
+if [[ -n "${RUNPOD_DATACENTER:-}" ]]; then
+    CREATE_ARGS+=(--data-center-ids "$RUNPOD_DATACENTER")
+    echo "  pinned to datacenter:    $RUNPOD_DATACENTER"
+fi
 # Community cloud SSH requires a public IP; secure cloud routes via proxy.
 [[ "$CLOUD_TYPE" == "COMMUNITY" ]] && CREATE_ARGS+=(--public-ip)
 
