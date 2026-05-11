@@ -87,7 +87,26 @@ POD_NAME="cl-macro-sft-$(date +%s)"
 TEMPLATE_ID="${RUNPOD_TEMPLATE_ID:-}"
 IMAGE="${RUNPOD_IMAGE:-runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04}"
 GPU_ID="${RUNPOD_GPU_ID:-NVIDIA A100 80GB PCIe}"
-DISK_GB="${RUNPOD_DISK_GB:-100}"
+# Per-pod persistent volume: survives pod stop/start (not delete). When set,
+# mounted at /workspace by RunPod, replacing the container's /workspace.
+# Default 200 GB for PHASE=grpo so the HF cache + pip wheels + macro-gym +
+# sbcl + bootstrap script stick around between sessions. Set 0 to disable.
+POD_VOLUME_GB="${POD_VOLUME_GB:-}"
+if [[ -z "$POD_VOLUME_GB" && "${PHASE:-sft}" == "grpo" ]]; then
+    POD_VOLUME_GB=200
+fi
+# Container disk: ephemeral, used for pip packages, /tmp, dpkg state, build
+# dirs. When /workspace is on a per-pod volume, 100 GB container is plenty
+# (~25 GB actually used). Without a volume, /workspace lives on container
+# disk and needs to hold the HF cache (~55 GB for Qwen3.6-27B), so default
+# 200 GB. Override via RUNPOD_DISK_GB.
+if [[ -n "${RUNPOD_DISK_GB:-}" ]]; then
+    DISK_GB="$RUNPOD_DISK_GB"
+elif [[ -n "$POD_VOLUME_GB" && "$POD_VOLUME_GB" != "0" ]]; then
+    DISK_GB=100
+else
+    DISK_GB=200
+fi
 CLOUD_TYPE="${RUNPOD_CLOUD_TYPE:-COMMUNITY}"
 
 # Build the env JSON object — modern `runpodctl pod create --env` expects
@@ -124,12 +143,19 @@ CREATE_ARGS=(
     --cloud-type "$CLOUD_TYPE"
     --env "$ENV_JSON"
 )
+# Per-pod volume: created with the pod, mounted at /workspace, survives
+# pod stop/start (but NOT pod delete). Use this when network volumes are
+# unavailable (e.g., the GPU you want is in a non-volume-capable DC).
+if [[ -n "$POD_VOLUME_GB" && "$POD_VOLUME_GB" != "0" ]]; then
+    CREATE_ARGS+=(--volume-in-gb "$POD_VOLUME_GB")
+    echo "  attaching per-pod volume: $POD_VOLUME_GB GB at /workspace"
+fi
 # Attach an existing RunPod network volume if NETWORK_VOLUME_ID is set.
 # When attached, /workspace becomes the volume mount (persistent across pod
 # recreations). Caches HF model + pip wheels + checkpoints across boots.
 if [[ -n "${NETWORK_VOLUME_ID:-}" ]]; then
     CREATE_ARGS+=(--network-volume-id "$NETWORK_VOLUME_ID")
-    echo "  attaching network volume: $NETWORK_VOLUME_ID"
+    echo "  attaching network volume:  $NETWORK_VOLUME_ID"
 fi
 # Pin the pod to a specific datacenter — required when using a network
 # volume (volumes are DC-bound), useful for stock targeting otherwise.
@@ -151,7 +177,15 @@ echo "  pod id: $POD_ID"
 
 cleanup() {
     if [[ -n "${KEEP_POD:-}" ]]; then
-        warn "KEEP_POD set — pod $POD_ID left running. Remove later with: runpodctl pod delete $POD_ID"
+        warn "KEEP_POD set — pod $POD_ID left running."
+        if [[ -n "$POD_VOLUME_GB" && "$POD_VOLUME_GB" != "0" ]]; then
+            warn "  Pod has a $POD_VOLUME_GB GB per-pod volume — when you're done:"
+            warn "    runpodctl pod stop   $POD_ID    # preserves the volume + caches for next session"
+            warn "    runpodctl pod start  $POD_ID    # resumes (volume intact, instant boot)"
+            warn "    runpodctl pod delete $POD_ID    # DESTROYS the volume — only use when fully done"
+        else
+            warn "  Remove later with: runpodctl pod delete $POD_ID"
+        fi
     else
         step "Tearing down pod $POD_ID"
         runpodctl pod delete "$POD_ID" || warn "Pod cleanup failed — remove manually: runpodctl pod delete $POD_ID"
