@@ -1,0 +1,229 @@
+---
+license: apache-2.0
+base_model: Qwen/Qwen3.6-27B
+library_name: peft
+pipeline_tag: text-generation
+language:
+- en
+tags:
+- common-lisp
+- macros
+- code-generation
+- lora
+- unsloth
+- chain-of-thought
+- thinking-traces
+datasets:
+- j14i/cl-macros-thinking
+---
+
+# cl-macro-27b-lora
+
+LoRA fine-tune of **Qwen3.6-27B** for generating Common Lisp macros with
+explicit `<think>...</think>` reasoning traces, followed by an idiomatic
+`(defmacro ...)` form.
+
+This is **Phase 1 (SFT)** of a two-phase training plan. Phase 2 (GRPO with
+SBCL-execution reward) will follow.
+
+## Intended use
+
+- **Drafting `defmacro` forms** that a human (or a downstream compiler /
+  test harness) reviews before execution.
+- **Teaching tool / exploration:** the reasoning traces walk through
+  variable-capture risks, hygiene decisions, expansion structure — useful
+  for learning the *thinking style* of macro-heavy CL.
+- **Foundation for RL** (GRPO with `sbcl --script` as a reward signal).
+
+Not intended for **auto-executing generated code without review** — see
+*Limitations* below.
+
+## Training
+
+| | |
+|---|---|
+| **Base model** | [`Qwen/Qwen3.6-27B`](https://huggingface.co/Qwen/Qwen3.6-27B) (hybrid Gated DeltaNet + full-attention, `model_type: qwen3_5`) |
+| **Method** | LoRA (rank 32, alpha 64, dropout 0.05) on q/k/v/o/gate/up/down projections |
+| **Framework** | [Unsloth](https://unsloth.ai/) 2026.5.2 + transformers v5 + trl 0.24 |
+| **Schedule** | 3 epochs, effective batch 8, max_seq_length 4096, cosine LR 2e-5, warmup 5% |
+| **Hardware** | Single A100 80 GB (RunPod Community Cloud) |
+| **Wall clock** | 2 h 07 min |
+| **Trainable params** | 159 M / 27.5 B (0.58%) |
+| **Optimizer** | adamw_8bit |
+| **Precision** | bf16 (`load_in_16bit=True`) |
+
+### Training data
+
+[`j14i/cl-macros-thinking`](https://huggingface.co/datasets/j14i/cl-macros-thinking)
+— 1,828 train / 203 validation examples. Chat-format messages with
+system + user + assistant turns. The assistant turn contains a `<think>`
+block (real reasoning, not placeholder) followed by an idiomatic
+`(defmacro ...)`.
+
+Derived from the public [`j14i/cl-macros`](https://huggingface.co/datasets/j14i/cl-macros)
+instruction-tuning dataset. Trace generation was done locally with
+Qwen3.6-27B (MLX 4-bit) and is documented in the source repo.
+
+### Loss trajectory
+
+| step | train loss | eval loss |
+|---:|---:|---:|
+| 50 | 0.551 | 0.556 |
+| 200 | 0.400 | 0.439 |
+| 400 | 0.313 | 0.383 |
+| 687 (final) | 0.389 (avg) | **0.367** |
+
+Eval loss decreased monotonically by 34% with no upward inflection.
+`load_best_model_at_end=True` was active, so this is the final saved
+checkpoint.
+
+## Usage
+
+### Unsloth (recommended for Qwen3.6 — handles Gated DeltaNet kernels)
+
+```python
+from unsloth import FastLanguageModel
+
+model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name="j14i/cl-macro-27b-lora",   # adapter dir auto-loads Qwen3.6 base
+    max_seq_length=4096,
+    load_in_16bit=True,
+    full_finetuning=False,
+)
+FastLanguageModel.for_inference(model)
+
+SYSTEM = (
+    "You are an expert Common Lisp macro programmer. Think step by step "
+    "before writing the macro. Always explain your reasoning in <think>...</think> "
+    "tags, then provide the defmacro form."
+)
+messages = [
+    {"role": "system", "content": SYSTEM},
+    {"role": "user", "content": "Write a Common Lisp macro `when-let` that..."},
+]
+inputs = tokenizer.apply_chat_template(messages, add_generation_prompt=True, return_tensors="pt").to(model.device)
+out = model.generate(inputs, max_new_tokens=2048, temperature=0.6, top_p=0.95)
+print(tokenizer.decode(out[0][inputs.shape[-1]:], skip_special_tokens=True))
+```
+
+### MLX (Apple Silicon)
+
+After merging the adapter into the base and converting to MLX format
+(see [`mac_to_mlx.sh`](https://github.com/jborkowski/cl-macro-llm/blob/main/scripts/mac_to_mlx.sh)):
+
+```bash
+uv run --with mlx-lm python -m mlx_lm.generate \
+    --model ~/models/cl-macro-27b-lora-mlx-bf16 \
+    --prompt "Write a Common Lisp macro ..." \
+    --max-tokens 2048 --temp 0.6
+```
+
+Benchmarks on M-series Mac:
+
+| precision | size | speed | peak mem |
+|---|---:|---:|---:|
+| bf16 MLX | 50 GB | 9.4 tok/s | 54 GB |
+| 4-bit MLX | 14 GB | 33 tok/s | 16 GB |
+
+### Adapter-only loading (transformers + peft)
+
+```python
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import PeftModel
+import torch
+
+tok = AutoTokenizer.from_pretrained("j14i/cl-macro-27b-lora")
+base = AutoModelForCausalLM.from_pretrained("Qwen/Qwen3.6-27B", torch_dtype=torch.bfloat16)
+model = PeftModel.from_pretrained(base, "j14i/cl-macro-27b-lora")
+```
+
+Note: vanilla `transformers` requires v5+ for Qwen3.6 (`model_type: qwen3_5`).
+Inference quality is the same as Unsloth; throughput is lower because the
+hybrid Mamba/DeltaNet kernels fall back to PyTorch.
+
+## End-to-end validation
+
+A `with-stopwatch` macro generated by this model was verified in
+**SBCL 2.6.4**:
+
+```lisp
+(defmacro with-stopwatch (&body body)
+  (let ((start (gensym))
+        (end (gensym))
+        (result (gensym)))
+    `(let ((,start (get-internal-real-time)))
+       (let ((,result (progn ,@body)))
+         (let ((,end (get-internal-real-time)))
+           (values (float (/ (- ,end ,start) internal-time-units-per-second))
+                   ,result))))))
+
+;; (with-stopwatch (sleep 0.3) (* 7 6))
+;; => 0.303329 s,  42
+```
+
+The bf16 model produced this on the first try with no manual edits. The
+macroexpansion is hygienic (three independent gensyms), the return-value
+contract matches the prompt, and `get-internal-real-time` /
+`internal-time-units-per-second` are the correct CL standard names.
+
+## Limitations
+
+1. **Function-name hallucinations under heavy quantization.** The 4-bit
+   MLX version of this model occasionally produces plausible-sounding but
+   non-existent CL function names (e.g., `internal-real-time` instead of
+   the correct `get-internal-real-time`). The bf16 version does not — the
+   model has the correct knowledge in its weights, but 4-bit quantization
+   blurs the distinction. For correctness-sensitive output, prefer bf16.
+
+2. **Novelty ceiling.** Trained on 1,828 macros from established CL
+   traditions (Let Over Lambda, On Lisp, Alexandria, Serapeum, Iterate,
+   Trivia). For genuinely novel macro requirements, the model will tend
+   to remix seen patterns rather than invent. This is expected for SFT
+   on a small corpus.
+
+3. **Edge cases of CL semantics are under-represented:** readtable
+   manipulation, package-system gymnastics, compiler-macros, `defstruct`
+   intricacies, condition system internals. Watch outputs in these areas.
+
+4. **Long reasoning traces can exceed `max_new_tokens`.** The model
+   sometimes "thinks past" the available budget without closing
+   `</think>` and emitting the final `(defmacro ...)`. Allow 2048+ tokens
+   for non-trivial prompts; for very complex macros, 4096+.
+
+5. **No tool use, no execution feedback.** This is SFT-only. The model
+   has no way to know whether a function it cites actually exists in
+   CLHS or in any specific implementation. **Always verify generated
+   code in a sandbox.**
+
+## Reproduction
+
+Full code, data prep, RunPod launcher, and troubleshooting are at
+[github.com/jborkowski/cl-macro-llm](https://github.com/jborkowski/cl-macro-llm).
+
+```bash
+git clone https://github.com/jborkowski/cl-macro-llm
+cd cl-macro-llm
+cp .env.example .env  # fill in HF_TOKEN, RUNPOD_API_KEY, RUNPOD_EXPECTED_EMAIL, etc.
+bash scripts/cloud/launch.sh  # boots an A100, runs the whole pipeline
+```
+
+Approximate cost: **~$3 of A100 time** on RunPod Community Cloud.
+
+## Roadmap
+
+- **Phase 2 (planned):** GRPO with an SBCL-execution reward harness.
+  Generated macros that compile and pass an expected-expansion test get
+  positive reward; those that hit `UNDEFINED-FUNCTION` or fail
+  `macroexpand` get negative. The function-name hallucination class
+  (limitation 1) is precisely the failure mode RL with executable
+  feedback eliminates fastest.
+- More training data, especially edge cases (readtable, package, condition
+  system) and "anti-examples" (subtly broken macros for the model to
+  learn what *not* to do).
+- Try `lora_dropout=0` after seeing GRPO behavior, paired with early
+  stopping on eval.
+
+## License
+
+Released under **Apache 2.0**, inheriting the base model's license. The
+training dataset is BSD-2-Clause.
