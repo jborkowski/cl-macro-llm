@@ -30,6 +30,25 @@ Runtime (SBCL parallelism is handled by macro-gym v0.3's MacroGrader):
     MACRO_GYM_HEAP_MB      default 384  — per-worker dynamic heap (SBCL)
     LOG_SAMPLES_EVERY      default 25   — steps between sample dumps
     SAMPLES_PER_DUMP       default 4    — rollouts written per dump
+
+TED-blended reward shaping (conservative; macro-gym Result.semantic_eq_score):
+    --ted-blend FLOAT  / TED_BLEND  default 0.3   — max bonus when base reward ≈ 0
+    --ted-band  FLOAT  / TED_BAND   default 0.05  — |base reward| ≤ band → blend fires
+
+    Blending rule: when the verdict's `semantic_eq_score` is populated AND
+    the base reward sits in the [-band, +band] "compiled but 0/1 tests pass"
+    bucket, replace the reward with `blend * sim` (so max bonus is `blend`,
+    bounded to 0.3 by default). Everything else — sim is None, an error
+    was returned, a syntax-error -0.1, or a full-pass 1.0 — is untouched.
+
+    No-op guarantee: when macro-gym returns `semantic_eq_score=None`
+    (today's reality on every verdict), rewards are byte-identical to the
+    pre-TED path. Set `--ted-blend 0.0` (or TED_BLEND=0) for an explicit
+    ablation control run that disables blending even after TED ships.
+
+    Self-test: `python grpo_train.py --self-test` exercises the blend
+    arithmetic against three hand-built verdicts (error / band-hit /
+    full-pass) and prints expected-vs-computed without loading the model.
 """
 
 from __future__ import annotations
@@ -52,10 +71,25 @@ from pathlib import Path
 os.environ.setdefault("UNSLOTH_VLLM_STANDBY", "0")
 os.environ.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")
 
-from datasets import Dataset
-from unsloth import FastLanguageModel
-from trl import GRPOConfig, GRPOTrainer
-from transformers import TrainerCallback
+# Early-out for `--self-test`: arithmetic-only smoke test for the TED
+# blend rule. Skip the heavy ML imports so the test can run on a laptop
+# (or anywhere unsloth/trl aren't installed).
+_SELF_TEST_MODE = "--self-test" in sys.argv
+
+if not _SELF_TEST_MODE:
+    from datasets import Dataset
+    from unsloth import FastLanguageModel
+    from trl import GRPOConfig, GRPOTrainer
+    from transformers import TrainerCallback
+else:
+    # Lightweight stubs so class-level `TrainerCallback` references parse.
+    # These code paths are unreachable in --self-test mode.
+    class TrainerCallback:  # type: ignore[no-redef]
+        pass
+    Dataset = None  # type: ignore[assignment]
+    FastLanguageModel = None  # type: ignore[assignment]
+    GRPOConfig = None  # type: ignore[assignment]
+    GRPOTrainer = None  # type: ignore[assignment]
 
 
 # ─── env helpers ──────────────────────────────────────────────────────
@@ -91,6 +125,49 @@ UNSLOTH_GRPO_MINI_BATCH         = _env("UNSLOTH_GRPO_MINI_BATCH", "")
 UNSLOTH_LOGIT_CHUNK_MULTIPLIER  = _env("UNSLOTH_LOGIT_CHUNK_MULTIPLIER", "")
 
 EVAL_TEST_SIZE      = float(_env("EVAL_TEST_SIZE", "0.1"))
+
+# TED-blended reward shaping (see top-of-file docstring). Defaults are
+# conservative: blend in TED only when the base reward sits in the
+# "compiled but 0/1 tests pass" band, and cap the bonus at `TED_BLEND`.
+# CLI overrides (--ted-blend / --ted-band) win over env vars; both
+# default to 0.3 / 0.05 if unset.
+TED_BLEND           = float(_env("TED_BLEND", "0.3"))
+TED_BAND            = float(_env("TED_BAND",  "0.05"))
+
+
+def _parse_cli_overrides(argv: list[str]) -> tuple[list[str], bool]:
+    """Strip TED-related flags from argv, mutate module globals.
+
+    Returns (remaining_argv, self_test_requested). Kept as a tiny ad-hoc
+    parser rather than introducing argparse because the rest of the file
+    is env-var driven — adding a full argparse here would be a bigger
+    refactor than the feature warrants.
+    """
+    global TED_BLEND, TED_BAND
+    self_test = False
+    remaining: list[str] = []
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--self-test":
+            self_test = True
+            i += 1
+        elif a == "--ted-blend" and i + 1 < len(argv):
+            TED_BLEND = float(argv[i + 1])
+            i += 2
+        elif a.startswith("--ted-blend="):
+            TED_BLEND = float(a.split("=", 1)[1])
+            i += 1
+        elif a == "--ted-band" and i + 1 < len(argv):
+            TED_BAND = float(argv[i + 1])
+            i += 2
+        elif a.startswith("--ted-band="):
+            TED_BAND = float(a.split("=", 1)[1])
+            i += 1
+        else:
+            remaining.append(a)
+            i += 1
+    return remaining, self_test
 
 
 SYSTEM_PROMPT = (
@@ -246,7 +323,11 @@ def extract_defmacro(text: str) -> str | None:
 # checkout, no reset/step state. Trainer's reward fn is just an
 # extract-defmacro shim around grader.grade_batch().
 import random
-from macro_gym import get_grader, shutdown_grader
+if not _SELF_TEST_MODE:
+    from macro_gym import get_grader, shutdown_grader
+else:
+    def get_grader(): raise RuntimeError("self-test: grader unavailable")
+    def shutdown_grader(): pass
 
 
 def _completion_to_text(completion) -> str:
@@ -273,7 +354,14 @@ _runtime: dict = {
 }
 
 
-def _maybe_dump_samples(prompts, completions, kata_ids, rewards) -> None:
+def _maybe_dump_samples(
+    prompts,
+    completions,
+    kata_ids,
+    rewards,
+    verdict_rewards=None,
+    semantic_eq_scores=None,
+) -> None:
     step  = _runtime["step"]
     every = _runtime["log_samples_every"]
     if not (_runtime["sample_now"] or (every > 0 and step > 0 and step % every == 0)):
@@ -290,12 +378,17 @@ def _maybe_dump_samples(prompts, completions, kata_ids, rewards) -> None:
         with out.open("a", encoding="utf-8") as f:
             for i in idxs:
                 text = _completion_to_text(completions[i])
+                # `reward` is the final (possibly TED-blended) reward; the
+                # raw grader output is recorded as `verdict_reward` so we
+                # can reconstruct the un-blended distribution post hoc.
                 f.write(json.dumps({
                     "step":               step,
                     "kata_id":            kata_ids[i] if kata_ids else None,
                     "prompt":             prompts[i] if prompts else None,
                     "completion":         text,
                     "reward":             rewards[i],
+                    "verdict_reward":     verdict_rewards[i] if verdict_rewards is not None else rewards[i],
+                    "semantic_eq_score":  semantic_eq_scores[i] if semantic_eq_scores is not None else None,
                     "defmacro_extracted": extract_defmacro(text),
                 }, ensure_ascii=False) + "\n")
     except Exception as e:
@@ -339,9 +432,36 @@ def macro_gym_reward(prompts, completions, **kwargs) -> list[float]:
 
     grader = get_grader()
     verdicts = grader.grade_batch(list(zip(kata_ids, macros)))
-    rewards = [float(v.get("reward", -0.1)) for v in verdicts]
 
-    _maybe_dump_samples(prompts, completions, kata_ids, rewards)
+    # Conservative TED-blended reward shaping. The blend ONLY fires when
+    # macro-gym populates `semantic_eq_score` (None today, populated
+    # post-TED-shipment) AND the base reward sits in the [-band, +band]
+    # "compiled but 0/1 tests pass" bucket. Outside that band — syntax
+    # errors (-0.1) and full-pass (1.0) — the reward is untouched. Max
+    # blended reward is `TED_BLEND * 1.0` (default 0.3), bounding any
+    # reward-hacking surface from TED-only optimisation.
+    blend_weight = TED_BLEND
+    blend_band   = TED_BAND
+    verdict_rewards: list[float] = []
+    semantic_eq_scores: list[float | None] = []
+    rewards: list[float] = []
+    for v in verdicts:
+        base = float(v.get("reward", -0.1))
+        sim = v.get("semantic_eq_score")
+        verdict_rewards.append(base)
+        semantic_eq_scores.append(sim)
+        if blend_weight == 0.0 or sim is None or v.get("error") is not None:
+            rewards.append(base)                  # fallback / error / no-TED: untouched
+        elif -blend_band <= base <= blend_band:
+            rewards.append(blend_weight * float(sim))  # band hit: bounded by blend_weight
+        else:
+            rewards.append(base)                  # syntax error or full pass: untouched
+
+    _maybe_dump_samples(
+        prompts, completions, kata_ids, rewards,
+        verdict_rewards=verdict_rewards,
+        semantic_eq_scores=semantic_eq_scores,
+    )
     return rewards
 
 
@@ -606,5 +726,59 @@ def main() -> int:
     return 0
 
 
+def _run_self_test() -> int:
+    """Smoke-test the TED-blend arithmetic against three hand-built verdicts.
+
+    Not a pytest — just a sanity gate. Exits 0 on agreement, 1 otherwise.
+    Does NOT load the model or touch macro-gym; pure arithmetic on the
+    blending rule. Run with `python grpo_train.py --self-test`.
+    """
+    print(f"[self-test] TED_BLEND={TED_BLEND}  TED_BAND={TED_BAND}")
+    blend_weight = TED_BLEND
+    blend_band   = TED_BAND
+
+    # Three hand-built verdicts exercising the three branches of the blend.
+    verdicts = [
+        # (label, verdict, expected)
+        ("error-path",
+         {"reward": 0.0, "semantic_eq_score": 0.85,
+          "error": {"type": "TimeoutError", "message": "x"}},
+         0.0),
+        ("band-hit (base=0.0, sim=0.9)",
+         {"reward": 0.0, "semantic_eq_score": 0.9, "error": None},
+         blend_weight * 0.9),
+        ("full-pass (base=1.0, sim=0.95)",
+         {"reward": 1.0, "semantic_eq_score": 0.95, "error": None},
+         1.0),
+        # The no-op guarantee: sim=None must yield base byte-identically.
+        ("no-TED-yet (sim=None, base=0.0)",
+         {"reward": 0.0, "semantic_eq_score": None, "error": None},
+         0.0),
+        ("no-TED-yet (sim=None, base=-0.1)",
+         {"reward": -0.1, "semantic_eq_score": None, "error": None},
+         -0.1),
+    ]
+    ok = True
+    for label, v, expected in verdicts:
+        base = float(v.get("reward", -0.1))
+        sim = v.get("semantic_eq_score")
+        if blend_weight == 0.0 or sim is None or v.get("error") is not None:
+            got = base
+        elif -blend_band <= base <= blend_band:
+            got = blend_weight * float(sim)
+        else:
+            got = base
+        agree = abs(got - expected) < 1e-9
+        ok = ok and agree
+        flag = "OK " if agree else "FAIL"
+        print(f"  [{flag}] {label:42s} expected={expected:+.4f}  got={got:+.4f}")
+    print(f"[self-test] {'all passed' if ok else 'FAILURES'}")
+    return 0 if ok else 1
+
+
 if __name__ == "__main__":
+    _argv, _self_test = _parse_cli_overrides(sys.argv[1:])
+    sys.argv = [sys.argv[0]] + _argv  # leave the rest untouched for downstream tools
+    if _self_test:
+        sys.exit(_run_self_test())
     sys.exit(main())
