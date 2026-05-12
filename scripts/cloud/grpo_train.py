@@ -43,7 +43,14 @@ from pathlib import Path
 # Unsloth long-context GRPO recommendation: keep vLLM weights swapped out
 # while the trainer step runs, then page them back for rollouts. Must be
 # set before unsloth is imported.
-os.environ.setdefault("UNSLOTH_VLLM_STANDBY", "1")
+#
+# But: we use use_vllm=False (qwen3_5 unsupported by vLLM), so STANDBY does
+# nothing useful and actively blocks PYTORCH_ALLOC_CONF=expandable_segments
+# (which Unsloth strips out when STANDBY is on). With OOM at the wire
+# (~1.5 GB short on the chunked-logsoftmax scratch), expandable_segments
+# is what closes the gap.
+os.environ.setdefault("UNSLOTH_VLLM_STANDBY", "0")
+os.environ.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")
 
 from datasets import Dataset
 from unsloth import FastLanguageModel
