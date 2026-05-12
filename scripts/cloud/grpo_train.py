@@ -86,10 +86,11 @@ else:
     # These code paths are unreachable in --self-test mode.
     class TrainerCallback:  # type: ignore[no-redef]
         pass
+    class GRPOTrainer:  # type: ignore[no-redef]
+        pass
     Dataset = None  # type: ignore[assignment]
     FastLanguageModel = None  # type: ignore[assignment]
     GRPOConfig = None  # type: ignore[assignment]
-    GRPOTrainer = None  # type: ignore[assignment]
 
 
 # ─── env helpers ──────────────────────────────────────────────────────
@@ -263,6 +264,7 @@ def load_katas(kata_root: Path) -> Dataset:
         instruction = (meta.get("instruction") or "").strip()
         if not instruction:
             continue
+        complexity = meta.get("complexity") or "?"
         rows.append({
             # macro-gym v0.3's reward_fn expects `kata_ids` (plural) — keep
             # the dataset column name aligned with the public API.
@@ -273,9 +275,10 @@ def load_katas(kata_root: Path) -> Dataset:
                 {"role": "user",   "content": instruction},
             ],
             "category":      meta.get("category") or "?",
-            "complexity":    meta.get("complexity") or "?",
+            "complexity":    complexity,
             "quality_score": float(meta.get("quality_score") or 1.0),
         })
+        _runtime["kata_complexity"][kata_dir.name] = complexity
     return Dataset.from_list(rows)
 
 
@@ -351,7 +354,163 @@ _runtime: dict = {
     "sample_now":        False,
     "n_samples_per_dump": int(_env("SAMPLES_PER_DUMP", "4")),
     "output_dir":        Path(OUTPUT_DIR),
+    "reward_by_tier":    {"basic": [], "intermediate": [], "complex": [], "advanced": []},
+    "reward_window":     int(_env("REWARD_WINDOW", "100")),
+    "kata_complexity":   {},
 }
+
+
+# ─── curriculum learning ──────────────────────────────────────────────
+
+class CurriculumSampler:
+    """Step-aware index sampler for curriculum-learning kata GRPO.
+
+    At step S, restrict to katas whose tier index is <= unlock_tier(S).
+    Within the allowed set, sample uniformly with replacement.
+
+    Reads current step from module-level `_runtime["step"]` (the same
+    mailbox that `RuntimeControlCallback` already updates each step) so
+    we do not need a second callback. See /autoplan audit trail #2.
+
+    NOTE: __iter__ returns exactly len(complexities) indices per call
+    (one "virtual epoch"). TRL re-calls __iter__ on each epoch and
+    re-reads the current step at that time, advancing the curriculum.
+    See audit trail #3.
+    """
+    TIERS = ("basic", "intermediate", "complex", "advanced")
+
+    def __init__(self, complexities, max_steps, schedule=(0.0, 0.25, 0.5, 0.75)):
+        if len(schedule) != len(self.TIERS):
+            raise ValueError(f"schedule must have {len(self.TIERS)} entries, got {len(schedule)}")
+        if schedule[0] != 0.0:
+            raise ValueError("schedule[0] must be 0.0 (basic tier must be unlocked at step 0)")
+        if any(a > b for a, b in zip(schedule, schedule[1:])):
+            raise ValueError(f"schedule must be monotonic non-decreasing, got {schedule}")
+
+        self.indices_by_tier = [[] for _ in self.TIERS]
+        unknown_count = 0
+        for i, c in enumerate(complexities):
+            if c in self.TIERS:
+                self.indices_by_tier[self.TIERS.index(c)].append(i)
+            else:
+                self.indices_by_tier[-1].append(i)
+                unknown_count += 1
+
+        if not self.indices_by_tier[0]:
+            raise RuntimeError(
+                "CurriculumSampler: 0 'basic' katas in dataset — "
+                "curriculum would silently disable for first phase. "
+                "Set CURRICULUM_DISABLED=1 or fix the data."
+            )
+
+        for i in range(1, len(self.TIERS) - 1):
+            if not self.indices_by_tier[i]:
+                print(
+                    f"WARN: CurriculumSampler: 0 '{self.TIERS[i]}' katas — "
+                    f"unlock at progress={schedule[i]:.2f} will add no new samples",
+                    file=sys.stderr,
+                )
+
+        if unknown_count:
+            print(
+                f"WARN: CurriculumSampler: {unknown_count} katas with unknown "
+                f"complexity → bucketed as 'advanced' (worst case)",
+                file=sys.stderr,
+            )
+
+        counts = ", ".join(
+            f"{name}={len(idx)}"
+            for name, idx in zip(self.TIERS, self.indices_by_tier)
+        )
+        print(
+            f"CurriculumSampler: {counts}, max_steps={max_steps}, "
+            f"schedule={schedule}",
+            file=sys.stderr,
+        )
+
+        self.max_steps = max_steps
+        self.schedule = schedule
+        self._total_len = sum(len(b) for b in self.indices_by_tier)
+
+    def unlock_tier(self, step):
+        """Return the highest tier index unlocked at this step."""
+        progress = step / max(self.max_steps, 1)
+        for tier_idx in range(len(self.TIERS) - 1, -1, -1):
+            if progress >= self.schedule[tier_idx]:
+                return tier_idx
+        return 0
+
+    def allowed_indices(self, step):
+        tier = self.unlock_tier(step)
+        return [i for t in range(tier + 1) for i in self.indices_by_tier[t]]
+
+    def __iter__(self):
+        # Finite one-epoch sampler. Reads step from _runtime mailbox.
+        # Granularity: tier is fixed for the duration of one __iter__ call
+        # (one epoch's worth of samples). Acceptable for the 4-tier
+        # schedule; see audit trail #9.
+        import random as _random
+        step = _runtime.get("step", 0)
+        allowed = self.allowed_indices(step)
+        return iter([_random.choice(allowed) for _ in range(self._total_len)])
+
+    def __len__(self):
+        return self._total_len
+
+
+class CurriculumGRPOTrainer(GRPOTrainer):
+    """GRPOTrainer that swaps in a CurriculumSampler when provided.
+
+    Overriding `_get_train_sampler` (private TRL API) instead of
+    monkey-patching at the instance level: subclassing is durable across
+    minor TRL version skews and fails LOUD on signature changes.
+    See /autoplan audit trail #1.
+    """
+    def __init__(self, *args, curriculum_sampler=None, **kwargs):
+        self._curriculum_sampler = curriculum_sampler
+        super().__init__(*args, **kwargs)
+
+    def _get_train_sampler(self, *args, **kwargs):
+        if self._curriculum_sampler is not None:
+            return self._curriculum_sampler
+        return super()._get_train_sampler(*args, **kwargs)
+
+
+class CurriculumSanityCallback(TrainerCallback):
+    """Fail loud at training start if the sampler isn't actually wired up.
+
+    Verifies that on the first batch, at step 0, all sampled indices belong
+    to tier-0 (basic). If TRL silently re-wraps the sampler (e.g., in a
+    SequentialSampler for DDP), this catches it before we waste compute.
+    See /autoplan audit trail #1.
+    """
+    def __init__(self, sampler):
+        self.sampler = sampler
+        self._checked = False
+
+    def on_train_begin(self, args, state, control, **kw):
+        if self._checked or self.sampler is None:
+            return control
+        self._checked = True
+        if state.global_step != 0:
+            return control
+        tier_0 = set(self.sampler.indices_by_tier[0])
+        if not tier_0:
+            return control
+        sample = list(self.sampler)[:8]
+        in_tier_0 = sum(1 for s in sample if s in tier_0)
+        if in_tier_0 < 8:
+            raise RuntimeError(
+                f"CurriculumSanityCallback: at step 0, expected all 8 "
+                f"sampled indices in tier-0 (basic), got {in_tier_0}/8. "
+                f"TRL may have re-wrapped the sampler — check trainer wiring."
+            )
+        print(
+            f"CurriculumSanityCallback: tier-0 assertion passed "
+            f"(8/8 samples in 'basic' at step 0)",
+            file=sys.stderr,
+        )
+        return control
 
 
 def _maybe_dump_samples(
@@ -457,6 +616,18 @@ def macro_gym_reward(prompts, completions, **kwargs) -> list[float]:
         else:
             rewards.append(base)                  # syntax error or full pass: untouched
 
+    # Record per-tier reward for curriculum-aware metrics (audit trail #8)
+    kc = _runtime.get("kata_complexity", {})
+    rbt = _runtime.get("reward_by_tier", {})
+    win = _runtime.get("reward_window", 100)
+    for kid, r in zip(kata_ids, rewards):
+        tier = kc.get(kid, "advanced")
+        if tier not in rbt:
+            tier = "advanced"
+        rbt[tier].append(r)
+        if len(rbt[tier]) > win:
+            del rbt[tier][:-win]
+
     _maybe_dump_samples(
         prompts, completions, kata_ids, rewards,
         verdict_rewards=verdict_rewards,
@@ -489,10 +660,16 @@ class MetricsLoggerCallback(TrainerCallback):
     def on_log(self, args, state, control, logs=None, **kw):
         if not logs:
             return
+        enriched = dict(logs)
+        rbt = _runtime.get("reward_by_tier", {})
+        for tier_name, samples in rbt.items():
+            if samples:
+                enriched[f"train/reward_{tier_name}"] = sum(samples) / len(samples)
+                enriched[f"train/n_{tier_name}"] = len(samples)
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             with self.path.open("a", encoding="utf-8") as f:
-                f.write(json.dumps({"step": state.global_step, **logs}) + "\n")
+                f.write(json.dumps({"step": state.global_step, **enriched}) + "\n")
         except Exception as e:
             print(f"  metrics log failed: {type(e).__name__}: {e}", file=sys.stderr)
 
@@ -607,9 +784,37 @@ def main() -> int:
         by_cat[cat] = by_cat.get(cat, 0) + 1
     print("  by category: " + ", ".join(f"{k}={v}" for k, v in sorted(by_cat.items())))
 
-    splits = full_ds.train_test_split(test_size=EVAL_TEST_SIZE, seed=42)
-    train_ds, eval_ds = splits["train"], splits["test"]
-    print(f"  split: {len(train_ds)} train / {len(eval_ds)} eval")
+    # Stratified eval split by complexity so eval reward stays comparable
+    # across the curriculum (otherwise eval at step 100 would be inflated).
+    # See /autoplan audit trail #13.
+    import collections as _collections
+    _rng = random.Random(42)
+    by_complexity: dict = _collections.defaultdict(list)
+    for i in range(len(full_ds)):
+        by_complexity[full_ds[i]["complexity"]].append(i)
+    eval_idx, train_idx = [], []
+    for _c, _idxs in by_complexity.items():
+        _idxs = list(_idxs)
+        _rng.shuffle(_idxs)
+        _n_eval = max(1, round(len(_idxs) * EVAL_TEST_SIZE)) if len(_idxs) >= 2 else 0
+        eval_idx.extend(_idxs[:_n_eval])
+        train_idx.extend(_idxs[_n_eval:])
+    _rng.shuffle(train_idx)
+    _rng.shuffle(eval_idx)
+    train_ds = full_ds.select(train_idx)
+    eval_ds  = full_ds.select(eval_idx)
+    print(f"  stratified split: {len(train_ds)} train / {len(eval_ds)} eval")
+    _eval_by_cx = _collections.Counter(eval_ds["complexity"])
+    print(f"  eval by complexity: {dict(_eval_by_cx)}")
+
+    # Curriculum learning configuration (see thoughts/2026-05-13-curriculum-learning-plan.md)
+    curriculum_disabled = _env("CURRICULUM_DISABLED", "0") != "0"
+    curriculum_schedule_str = _env("CURRICULUM_SCHEDULE", "0,0.25,0.5,0.75")
+    try:
+        curriculum_schedule = tuple(float(x.strip()) for x in curriculum_schedule_str.split(","))
+    except ValueError as e:
+        print(f"ERROR: bad CURRICULUM_SCHEDULE='{curriculum_schedule_str}': {e}", file=sys.stderr)
+        return 1
 
     grpo_kwargs: dict = dict(
         output_dir=OUTPUT_DIR,
@@ -687,7 +892,43 @@ def main() -> int:
     print(f"  samples → {OUTPUT_DIR}/samples-step-NNN.jsonl  "
           f"(every {_runtime['log_samples_every']} steps)")
 
-    trainer = GRPOTrainer(
+    # Resume from the latest checkpoint if one exists — survives OOM /
+    # pod restart without losing prior progress.
+    resume = False
+    resume_step = 0
+    out_path = Path(OUTPUT_DIR)
+    if out_path.exists() and any(out_path.glob("checkpoint-*")):
+        resume = True
+        # Find latest checkpoint and pre-seed _runtime["step"] so the
+        # curriculum sampler picks the right tier on the first batch.
+        # See /autoplan audit trail #5.
+        try:
+            latest_ckpt = max(out_path.glob("checkpoint-*"),
+                              key=lambda p: int(p.name.split("-")[-1]))
+            state_path = latest_ckpt / "trainer_state.json"
+            if state_path.exists():
+                _state = json.loads(state_path.read_text())
+                resume_step = int(_state.get("global_step", 0))
+                _runtime["step"] = resume_step
+                print(f"  resume: pre-seeded step={resume_step} from {state_path}")
+        except Exception as e:
+            print(f"  WARN: failed to pre-seed resume step: {type(e).__name__}: {e}",
+                  file=sys.stderr)
+        print(f"  resuming from latest checkpoint under {OUTPUT_DIR}")
+
+    # Curriculum wiring (audit trail #1, #2)
+    sampler = None
+    if not curriculum_disabled:
+        sampler = CurriculumSampler(
+            complexities=list(train_ds["complexity"]),
+            max_steps=MAX_STEPS,
+            schedule=curriculum_schedule,
+        )
+        callbacks.append(CurriculumSanityCallback(sampler))
+    else:
+        print("  CURRICULUM_DISABLED=1 — uniform sampling")
+
+    trainer = CurriculumGRPOTrainer(
         model=model,
         processing_class=tokenizer,
         reward_funcs=[macro_gym_reward],
@@ -695,15 +936,8 @@ def main() -> int:
         train_dataset=train_ds,
         eval_dataset=eval_ds,
         callbacks=callbacks,
+        curriculum_sampler=sampler,
     )
-
-    # Resume from the latest checkpoint if one exists — survives OOM /
-    # pod restart without losing prior progress.
-    resume = False
-    out_path = Path(OUTPUT_DIR)
-    if out_path.exists() and any(out_path.glob("checkpoint-*")):
-        resume = True
-        print(f"  resuming from latest checkpoint under {OUTPUT_DIR}")
 
     print("\n=== Starting GRPO training ===")
     train_result = trainer.train(resume_from_checkpoint=resume)
@@ -772,6 +1006,29 @@ def _run_self_test() -> int:
         ok = ok and agree
         flag = "OK " if agree else "FAIL"
         print(f"  [{flag}] {label:42s} expected={expected:+.4f}  got={got:+.4f}")
+
+    print("[self-test] CurriculumSampler schedule arithmetic")
+    _complexities = (
+        ["basic"] * 4 + ["intermediate"] * 3 + ["complex"] * 2 + ["advanced"] * 1
+    )
+    _s = CurriculumSampler(_complexities, max_steps=100, schedule=(0.0, 0.25, 0.5, 0.75))
+    schedule_checks = [
+        (0,  0),
+        (24, 0),
+        (25, 1),
+        (49, 1),
+        (50, 2),
+        (74, 2),
+        (75, 3),
+        (99, 3),
+    ]
+    for step, expected in schedule_checks:
+        got = _s.unlock_tier(step)
+        agree = (got == expected)
+        ok = ok and agree
+        flag = "OK " if agree else "FAIL"
+        print(f"  [{flag}] step={step:3d}  expected_tier={expected}  got_tier={got}")
+
     print(f"[self-test] {'all passed' if ok else 'FAILURES'}")
     return 0 if ok else 1
 
