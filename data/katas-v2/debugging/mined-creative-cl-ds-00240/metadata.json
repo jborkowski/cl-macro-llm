@@ -1,0 +1,13 @@
+{
+  "idx": 240,
+  "instruction": "Write a Common Lisp macro `inspect-when` that evaluates a value once, calls INSPECT on it only when a test is true (e.g. a debug flag), and always returns the value so it can be spliced into any expression.",
+  "reference_defmacro": "(defmacro inspect-when (test value)\n  (let ((v (gensym)))\n    `(let ((,v ,value))\n       (when ,test (inspect ,v))\n       ,v)))",
+  "category": "debugging",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00240",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (FIND-RECORD ID)))\n            (WHEN *DEBUG-MODE* (INSPECT #:G1))\n            #:G1)\nACTUAL:   (LET ((#:G112 (FIND-RECORD ID)))\n            (WHEN *DEBUG-MODE* (INSPECT #:G112))\n            #:G112)\n\n--- stderr ---"
+}

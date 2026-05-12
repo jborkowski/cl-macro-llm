@@ -1,0 +1,11 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 KEYS) (#:G2 VALUES))
+            (UNLESS (= (LENGTH #:G1) (LENGTH #:G2))
+              (ERROR "Sequences have different lengths: ~A vs ~A" (LENGTH #:G1)
+                     (LENGTH #:G2))))
+ACTUAL:   (LET ((#:G112 KEYS) (#:G113 VALUES))
+            (UNLESS (= (LENGTH #:G112) (LENGTH #:G113))
+              (ERROR "Sequences have different lengths: ~A vs ~A"
+                     (LENGTH #:G112) (LENGTH #:G113))))
+
+--- stderr ---

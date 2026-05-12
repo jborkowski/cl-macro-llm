@@ -1,0 +1,13 @@
+{
+  "idx": 144,
+  "instruction": "You are a Common Lisp macro expert. Given this code pattern:\n(is 1 1)\n\nWrite a macro that addresses: Macro call that should be transformed by is",
+  "reference_defmacro": "(defmacro is (got expected &rest args)\n  (with-gensyms (duration result new-args desc)\n    (once-only (expected)\n      `(let* ((,new-args (list ,@args))\n              (,desc (parse-description-and-test ,new-args)))\n         (with-catching-errors (:description ,desc :expected ,expected)\n           (with-duration ((,duration ,result) ,got)\n             (test ,result ,expected ,new-args\n                   :duration ,duration)))))))",
+  "category": "capture-management",
+  "technique": "once-only,gensym",
+  "complexity": "intermediate",
+  "quality_score": 0.86,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/cl-ds/_rejected/cl-ds-00144",
+  "original_failure_log_excerpt": "ERROR: The variable RESULT is unbound.\n\n--- stderr ---\n\n; file: /tmp/tmpj7h1h57z.lisp\n; in: DEFMACRO IS\n;     `(LET* ((,NEW-ARGS (LIST ,@ARGS))\n;             (,DESC (PARSE-DESCRIPTION-AND-TEST ,NEW-ARGS)))\n;        (WITH-CATCHING-ERRORS (:DESCRIPTION ,DESC :EXPECTED ,EXPECTED)\n;         (WITH-DURATION ((,DURATION ,RESULT) ,GOT)\n;          (TEST ,RESULT ,EXPECTED ,NEW-ARGS :DURATION ,DURATION))))\n; --> SB-IMPL::|List| \n; ==>\n;   (SB-IMPL::|List| DESC (SB-IMPL::|List| 'PARSE-DESCRIPTION-AND-TEST NEW-ARGS))\n; \n; caught WARNING:\n;   undefined variable: COMMON-LISP-USER::DESC\n\n;     (DURATION RESUL"
+}

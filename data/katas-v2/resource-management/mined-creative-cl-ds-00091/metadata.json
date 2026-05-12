@@ -1,0 +1,13 @@
+{
+  "idx": 91,
+  "instruction": "Write a Common Lisp macro `fluid-let` that temporarily assigns new values to a list of special variables for the duration of body, restoring the originals via unwind-protect. Use gensyms to save the prior values.",
+  "reference_defmacro": "(defmacro fluid-let (bindings &body body)\n  (let ((saved (mapcar (lambda (b) (declare (ignore b)) (gensym)) bindings)))\n    `(let ,(mapcar (lambda (s b) (list s (car b))) saved bindings)\n       (unwind-protect\n            (progn ,@(mapcar (lambda (b) `(setf ,(car b) ,(cadr b))) bindings)\n                   ,@body)\n         ,@(mapcar (lambda (s b) `(setf ,(car b) ,s)) saved bindings)))))",
+  "category": "resource-management",
+  "technique": "gensym",
+  "complexity": "advanced",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00091",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 *DEBUG*))\n            (UNWIND-PROTECT (PROGN (SETF *DEBUG* T) (RUN)) (SETF *DEBUG* #:G1)))\nACTUAL:   (LET ((#:G112 *DEBUG*))\n            (UNWIND-PROTECT (PROGN (SETF *DEBUG* T) (RUN))\n              (SETF *DEBUG* #:G112)))\n\n--- stderr ---"
+}

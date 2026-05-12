@@ -1,0 +1,13 @@
+{
+  "idx": 485,
+  "instruction": "Write a Common Lisp macro `with-temp-package` that creates a fresh package with a unique name, binds it to a variable for body, and deletes the package in an unwind-protect cleanup.",
+  "reference_defmacro": "(defmacro with-temp-package ((var) &body body)\n  (let ((name (gensym)))\n    `(let* ((,name (format nil \"TMP-~A\" (gensym)))\n            (,var (make-package ,name :use '(:cl))))\n       (unwind-protect (progn ,@body)\n         (delete-package ,var)))))",
+  "category": "resource-management",
+  "technique": "gensym",
+  "complexity": "advanced",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00485",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET* ((#:G1 (FORMAT NIL \"TMP-~A\" (GENSYM)))\n                 (P (MAKE-PACKAGE #:G1 :USE '(:CL))))\n            (UNWIND-PROTECT (PROGN (INTERN \"FOO\" P)) (DELETE-PACKAGE P)))\nACTUAL:   (LET* ((#:G112 (FORMAT NIL \"TMP-~A\" (GENSYM)))\n                 (P (MAKE-PACKAGE #:G112 :USE '(:CL))))\n            (UNWIND-PROTECT (PROGN (INTERN \"FOO\" P)) (DELETE-PACKAGE P)))\n\n--- stderr ---"
+}

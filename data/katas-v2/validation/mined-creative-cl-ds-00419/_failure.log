@@ -1,0 +1,11 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 NAME))
+            (UNLESS (STRINGP #:G1)
+              (ERROR "~S does not satisfy ~S" #:G1 'STRINGP))
+            #:G1)
+ACTUAL:   (LET ((#:G112 NAME))
+            (UNLESS (STRINGP #:G112)
+              (ERROR "~S does not satisfy ~S" #:G112 'STRINGP))
+            #:G112)
+
+--- stderr ---

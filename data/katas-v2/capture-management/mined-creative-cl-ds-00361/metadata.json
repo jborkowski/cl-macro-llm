@@ -1,0 +1,13 @@
+{
+  "idx": 361,
+  "instruction": "Write a Common Lisp macro `with-swapped` that swaps the values of two places, runs body, and restores both places to their original values when body exits (even on non-local exits).",
+  "reference_defmacro": "(defmacro with-swapped (a b &body body)\n  (let ((ga (gensym)) (gb (gensym)))\n    `(let ((,ga ,a) (,gb ,b))\n       (setf ,a ,gb ,b ,ga)\n       (unwind-protect (progn ,@body)\n         (setf ,a ,ga ,b ,gb)))))",
+  "category": "capture-management",
+  "technique": "gensym",
+  "complexity": "advanced",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00361",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 A) (#:G2 B))\n            (SETF A #:G2\n                  B #:G1)\n            (UNWIND-PROTECT (PROGN (PROCESS))\n              (SETF A #:G1\n                    B #:G2)))\nACTUAL:   (LET ((#:G112 A) (#:G113 B))\n            (SETF A #:G113\n                  B #:G112)\n            (UNWIND-PROTECT (PROGN (PROCESS))\n              (SETF A #:G112\n                    B #:G113)))\n\n--- stderr ---"
+}

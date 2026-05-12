@@ -1,0 +1,13 @@
+MISMATCH
+EXPECTED: (PROGN
+           (FORMAT *TRACE-OUTPUT* "~&[ENTER ~A]~%" "foo")
+           (LET ((#:G1 (PROGN (COMPUTE))))
+             (FORMAT *TRACE-OUTPUT* "~&[EXIT ~A]~%" "foo")
+             #:G1))
+ACTUAL:   (PROGN
+           (FORMAT *TRACE-OUTPUT* "~&[ENTER ~A]~%" "foo")
+           (LET ((#:G112 (PROGN (COMPUTE))))
+             (FORMAT *TRACE-OUTPUT* "~&[EXIT ~A]~%" "foo")
+             #:G112))
+
+--- stderr ---

@@ -1,0 +1,7 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (LEFT)) (#:G2 (RIGHT)))
+            (UNLESS (EQUAL #:G1 #:G2) (WARN "diff")))
+ACTUAL:   (LET ((#:G112 (LEFT)) (#:G113 (RIGHT)))
+            (UNLESS (EQUAL #:G112 #:G113) (WARN "diff")))
+
+--- stderr ---

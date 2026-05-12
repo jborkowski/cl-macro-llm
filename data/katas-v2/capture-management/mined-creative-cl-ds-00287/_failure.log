@@ -1,0 +1,11 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (BALANCE)))
+            (IF (PLUSP #:G1)
+                :OK
+                :OVERDRAWN))
+ACTUAL:   (LET ((#:G112 (BALANCE)))
+            (IF (PLUSP #:G112)
+                :OK
+                :OVERDRAWN))
+
+--- stderr ---

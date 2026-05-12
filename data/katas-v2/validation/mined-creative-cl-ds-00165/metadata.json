@@ -1,0 +1,13 @@
+{
+  "idx": 165,
+  "instruction": "Write a Common Lisp macro `validate-range` that evaluates an expression and two bounds exactly once each; if the value is outside [min, max] inclusive, signal an error; otherwise return the value.",
+  "reference_defmacro": "(defmacro validate-range (expr min max)\n  (let ((g (gensym)) (gmin (gensym)) (gmax (gensym)))\n    `(let ((,g ,expr) (,gmin ,min) (,gmax ,max))\n       (unless (and (>= ,g ,gmin) (<= ,g ,gmax))\n         (error \"Value ~A out of range [~A, ~A]\" ,g ,gmin ,gmax))\n       ,g)))",
+  "category": "validation",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00165",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (READ-INPUT)) (#:G2 0) (#:G3 100))\n            (UNLESS (AND (>= #:G1 #:G2) (<= #:G1 #:G3))\n              (ERROR \"Value ~A out of range [~A, ~A]\" #:G1 #:G2 #:G3))\n            #:G1)\nACTUAL:   (LET ((#:G112 (READ-INPUT)) (#:G113 0) (#:G114 100))\n            (UNLESS (AND (>= #:G112 #:G113) (<= #:G112 #:G114))\n              (ERROR \"Value ~A out of range [~A, ~A]\" #:G112 #:G113 #:G114))\n            #:G112)\n\n--- stderr ---"
+}

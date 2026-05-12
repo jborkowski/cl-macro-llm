@@ -1,0 +1,13 @@
+{
+  "idx": 146,
+  "instruction": "Write a Common Lisp macro `with-accumulator` that hides a numeric accumulator cell and binds a user-named local function that adds to it. The form yields the final accumulated value.",
+  "reference_defmacro": "(defmacro with-accumulator ((name initial) &body body)\n  (let ((acc (gensym)) (x (gensym)))\n    `(let ((,acc ,initial))\n       (flet ((,name (,x) (incf ,acc ,x)))\n         ,@body\n         ,acc))))",
+  "category": "capture-management",
+  "technique": "closure-capture",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00146",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 0))\n            (FLET ((ADD (#:G2)\n                     (INCF #:G1 #:G2)))\n              (ADD 5)\n              (ADD 7)\n              #:G1))\nACTUAL:   (LET ((#:G112 0))\n            (FLET ((ADD (#:G113)\n                     (INCF #:G112 #:G113)))\n              (ADD 5)\n              (ADD 7)\n              #:G112))\n\n--- stderr ---"
+}

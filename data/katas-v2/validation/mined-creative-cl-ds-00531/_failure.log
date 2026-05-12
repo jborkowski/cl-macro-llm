@@ -1,0 +1,13 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (GET-NUMS)))
+            (DOLIST (#:G2 #:G1)
+              (UNLESS (INTEGERP #:G2)
+                (ERROR "Element ~S fails ~S" #:G2 'INTEGERP)))
+            #:G1)
+ACTUAL:   (LET ((#:G112 (GET-NUMS)))
+            (DOLIST (#:G113 #:G112)
+              (UNLESS (INTEGERP #:G113)
+                (ERROR "Element ~S fails ~S" #:G113 'INTEGERP)))
+            #:G112)
+
+--- stderr ---

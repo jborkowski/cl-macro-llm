@@ -1,0 +1,11 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 PAIR) (#:G2 2))
+            (UNLESS (= (LENGTH #:G1) #:G2)
+              (ERROR "Expected length ~S, got ~S" #:G2 (LENGTH #:G1)))
+            #:G1)
+ACTUAL:   (LET ((#:G112 PAIR) (#:G113 2))
+            (UNLESS (= (LENGTH #:G112) #:G113)
+              (ERROR "Expected length ~S, got ~S" #:G113 (LENGTH #:G112)))
+            #:G112)
+
+--- stderr ---

@@ -1,0 +1,7 @@
+MISMATCH
+EXPECTED: (LET* ((#:G1 (READ-VAL)) (#:G2 0) (#:G3 100))
+            (+ #:G2 (MOD (- #:G1 #:G2) (- #:G3 #:G2))))
+ACTUAL:   (LET* ((#:G112 (READ-VAL)) (#:G113 0) (#:G114 100))
+            (+ #:G113 (MOD (- #:G112 #:G113) (- #:G114 #:G113))))
+
+--- stderr ---

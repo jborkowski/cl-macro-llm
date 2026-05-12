@@ -1,0 +1,13 @@
+{
+  "idx": 142,
+  "instruction": "Write a Common Lisp macro `if-pred` that evaluates a value expression once into a hidden gensym, applies a predicate to it, and in the truthy branch rebinds it to a user-named symbol.",
+  "reference_defmacro": "(defmacro if-pred (pred value var then &optional else)\n  (let ((g (gensym)))\n    `(let ((,g ,value))\n       (if (,pred ,g)\n           (let ((,var ,g)) ,then)\n           ,else))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00142",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 X))\n            (IF (NUMBERP #:G1)\n                (LET ((N #:G1))\n                  (+ N 1))\n                :NOPE))\nACTUAL:   (LET ((#:G112 X))\n            (IF (NUMBERP #:G112)\n                (LET ((N #:G112))\n                  (+ N 1))\n                :NOPE))\n\n--- stderr ---"
+}

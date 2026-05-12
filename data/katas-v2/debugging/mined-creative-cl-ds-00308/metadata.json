@@ -1,0 +1,13 @@
+{
+  "idx": 308,
+  "instruction": "Write a Common Lisp macro `with-instrumentation` that prints an entry message before body executes and an exit message with the result after, returning the body's value. The name argument must be evaluated exactly once.",
+  "reference_defmacro": "(defmacro with-instrumentation (name &body body)\n  (let ((n (gensym)) (r (gensym)))\n    `(let ((,n ,name))\n       (format *trace-output* \"~&ENTER ~A~%\" ,n)\n       (let ((,r (progn ,@body)))\n         (format *trace-output* \"~&EXIT ~A => ~S~%\" ,n ,r)\n         ,r))))",
+  "category": "debugging",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00308",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 \"step1\"))\n            (FORMAT *TRACE-OUTPUT* \"~&ENTER ~A~%\" #:G1)\n            (LET ((#:G2 (PROGN (DO-WORK))))\n              (FORMAT *TRACE-OUTPUT* \"~&EXIT ~A => ~S~%\" #:G1 #:G2)\n              #:G2))\nACTUAL:   (LET ((#:G112 \"step1\"))\n            (FORMAT *TRACE-OUTPUT* \"~&ENTER ~A~%\" #:G112)\n            (LET ((#:G113 (PROGN (DO-WORK))))\n              (FORMAT *TRACE-OUTPUT* \"~&EXIT ~A => ~S~%\" #:G112 #:G113)\n              #:G113))\n\n--- stderr ---"
+}

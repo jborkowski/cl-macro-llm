@@ -1,0 +1,10 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (FIND X LIST)))
+            (UNLESS #:G1 (ERROR "Assertion failed: ~S is nil" '(FIND X LIST)))
+            #:G1)
+ACTUAL:   (LET ((#:G112 (FIND X LIST)))
+            (UNLESS #:G112
+              (ERROR "Assertion failed: ~S is nil" '(FIND X LIST)))
+            #:G112)
+
+--- stderr ---

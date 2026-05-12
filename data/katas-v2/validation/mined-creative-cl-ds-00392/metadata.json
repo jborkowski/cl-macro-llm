@@ -1,0 +1,13 @@
+{
+  "idx": 392,
+  "instruction": "Write a Common Lisp macro `ensure-type` that evaluates an expression once, checks that its value has the given type using `check-type`, and returns the value. Use gensym to avoid recomputing the expression.",
+  "reference_defmacro": "(defmacro ensure-type (expr type)\n  (let ((g (gensym)))\n    `(let ((,g ,expr))\n       (check-type ,g ,type)\n       ,g)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00392",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (GET-X)))\n            (CHECK-TYPE #:G1 INTEGER)\n            #:G1)\nACTUAL:   (LET ((#:G112 (GET-X)))\n            (CHECK-TYPE #:G112 INTEGER)\n            #:G112)\n\n--- stderr ---"
+}

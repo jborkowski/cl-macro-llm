@@ -1,0 +1,13 @@
+{
+  "idx": 352,
+  "instruction": "Write a Common Lisp macro `nth-bind` that evaluates a list expression once and binds its first three elements to user-named variables in scope of body.",
+  "reference_defmacro": "(defmacro nth-bind ((a b c) list &body body)\n  (let ((g (gensym)))\n    `(let ((,g ,list))\n       (let ((,a (first ,g)) (,b (second ,g)) (,c (third ,g)))\n         ,@body))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00352",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (GET-VEC)))\n            (LET ((X (FIRST #:G1)) (Y (SECOND #:G1)) (Z (THIRD #:G1)))\n              (+ X Y Z)))\nACTUAL:   (LET ((#:G112 (GET-VEC)))\n            (LET ((X (FIRST #:G112)) (Y (SECOND #:G112)) (Z (THIRD #:G112)))\n              (+ X Y Z)))\n\n--- stderr ---"
+}

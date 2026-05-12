@@ -1,0 +1,13 @@
+{
+  "idx": 75,
+  "instruction": "Write a Common Lisp macro `peek` that takes a label and an expression, prints the label and the evaluated value to *trace-output*, then returns the value. Useful for inserting into the middle of expressions.",
+  "reference_defmacro": "(defmacro peek (label expr)\n  (let ((val (gensym)))\n    `(let ((,val ,expr))\n       (format *trace-output* \"~&PEEK ~A: ~S~%\" ,label ,val)\n       ,val)))",
+  "category": "debugging",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00075",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (GET-USER-ID)))\n            (FORMAT *TRACE-OUTPUT* \"~&PEEK ~A: ~S~%\" \"user-id\" #:G1)\n            #:G1)\nACTUAL:   (LET ((#:G112 (GET-USER-ID)))\n            (FORMAT *TRACE-OUTPUT* \"~&PEEK ~A: ~S~%\" \"user-id\" #:G112)\n            #:G112)\n\n--- stderr ---"
+}

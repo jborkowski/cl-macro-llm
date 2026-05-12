@@ -1,0 +1,13 @@
+{
+  "idx": 1291,
+  "instruction": "Define a macro that eliminates this repetitive pattern:\n(next-ffi)\n\nIssue: Macro call that should be transformed by next-ffi",
+  "reference_defmacro": "(defmacro next-ffi ()\n  (with-gensyms (next)\n    `(let ((,next (cadr fields)))\n       (foreign-to-ffi\n        (and ,next (foreign-type ,next))\n        (cdr names)\n        (cdr params)\n        (cdr fields)\n        body))))",
+  "category": "capture-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 0.86,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/cl-ds/_rejected/cl-ds-01291",
+  "original_failure_log_excerpt": "ERROR: The function COMMON-LISP-USER::NEXT is undefined.\n\n--- stderr ---\n\n; file: /tmp/tmp2j35jpu4.lisp\n; in: DEFMACRO NEXT-FFI\n;     `(LET ((,NEXT (CADR FIELDS)))\n;        (FOREIGN-TO-FFI (AND ,NEXT (FOREIGN-TYPE ,NEXT)) (CDR NAMES) (CDR PARAMS)\n;         (CDR FIELDS) BODY))\n; --> SB-IMPL::|List| \n; ==>\n;   (SB-IMPL::|List*| NEXT '((CADR FIELDS)))\n; \n; caught WARNING:\n;   undefined variable: COMMON-LISP-USER::NEXT\n; \n; compilation unit finished\n;   Undefined functions:\n;     NEXT WITH-GENSYMS\n;   Undefined variable:\n;     NEXT\n;   caught 1 WARNING condition"
+}

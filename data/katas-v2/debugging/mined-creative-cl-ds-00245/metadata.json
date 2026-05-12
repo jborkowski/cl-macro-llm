@@ -1,0 +1,13 @@
+{
+  "idx": 245,
+  "instruction": "Write a Common Lisp macro `with-printed-vars` that evaluates a body, then prints the current value of each named variable to *trace-output*, and returns the value the body produced.",
+  "reference_defmacro": "(defmacro with-printed-vars (vars &body body)\n  (let ((result (gensym)))\n    `(let ((,result (progn ,@body)))\n       ,@(mapcar (lambda (v) `(format *trace-output* \"~&~A = ~S~%\" ',v ,v)) vars)\n       ,result)))",
+  "category": "debugging",
+  "technique": "dispatch",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00245",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1\n                 (PROGN\n                  (SETF X 1\n                        Y 2))))\n            (FORMAT *TRACE-OUTPUT* \"~&~A = ~S~%\" 'X X)\n            (FORMAT *TRACE-OUTPUT* \"~&~A = ~S~%\" 'Y Y)\n            #:G1)\nACTUAL:   (LET ((#:G112\n                 (PROGN\n                  (SETF X 1\n                        Y 2))))\n            (FORMAT *TRACE-OUTPUT* \"~&~A = ~S~%\" 'X X)\n            (FORMAT *TRACE-OUTPUT* \"~&~A = ~S~%\" 'Y Y)\n            #:G112)\n\n--- stderr ---"
+}

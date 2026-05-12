@@ -1,0 +1,13 @@
+{
+  "idx": 2679,
+  "instruction": "Define a macro that eliminates this repetitive pattern:\n(pop-last-preprocessor-directive-token directive-token-list directive-symbol)\n\nIssue: Macro call that should be transformed by pop-last-preprocessor-directive-token",
+  "reference_defmacro": "(defmacro pop-last-preprocessor-directive-token (token-list directive-name)\n  \"For #ifdef, #ifndef, and #undef\"\n  (with-gensyms (dsym_)\n    `(let ((,dsym_ ,directive-name))\n       (prog1 (pop-preprocessor-directive-token ,token-list ,dsym_)\n         (check-no-preprocessor-token ,token-list ,dsym_)))))",
+  "category": "capture-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 0.9125,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/cl-ds/_rejected/cl-ds-02679",
+  "original_failure_log_excerpt": "ERROR: The function COMMON-LISP-USER::DSYM_ is undefined.\n\n--- stderr ---\n\n; file: /tmp/tmp9xco8_k1.lisp\n; in: DEFMACRO POP-LAST-PREPROCESSOR-DIRECTIVE-TOKEN\n;     `(LET ((,DSYM_ ,DIRECTIVE-NAME))\n;        (PROG1 (POP-PREPROCESSOR-DIRECTIVE-TOKEN ,TOKEN-LIST ,DSYM_)\n;          (CHECK-NO-PREPROCESSOR-TOKEN ,TOKEN-LIST ,DSYM_)))\n; --> SB-IMPL::|List| \n; ==>\n;   (SB-IMPL::|List| DSYM_ DIRECTIVE-NAME)\n; \n; caught WARNING:\n;   undefined variable: COMMON-LISP-USER::DSYM_\n; \n; compilation unit finished\n;   Undefined functions:\n;     DSYM_ WITH-GENSYMS\n;   Undefined variable:\n;     DSYM_\n;   caught 1 "
+}

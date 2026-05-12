@@ -1,0 +1,11 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (COMPUTE)) (#:G2 EXPECTED))
+            (UNLESS (EQUAL #:G1 #:G2)
+              (ERROR "Expected ~S to equal ~S" #:G1 #:G2))
+            #:G1)
+ACTUAL:   (LET ((#:G112 (COMPUTE)) (#:G113 EXPECTED))
+            (UNLESS (EQUAL #:G112 #:G113)
+              (ERROR "Expected ~S to equal ~S" #:G112 #:G113))
+            #:G112)
+
+--- stderr ---

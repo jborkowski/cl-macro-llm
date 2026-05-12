@@ -1,0 +1,13 @@
+{
+  "idx": 262,
+  "instruction": "Write a Common Lisp macro `with-pid-file` that writes a process id stamp to a file at the given path, runs body, and deletes the file on exit. Use gensyms for the path and stream temporaries so callers cannot shadow them.",
+  "reference_defmacro": "(defmacro with-pid-file (path &body body)\n  (let ((p (gensym)) (s (gensym)))\n    `(let ((,p ,path))\n       (with-open-file (,s ,p :direction :output :if-exists :supersede :if-does-not-exist :create)\n         (format ,s \"~A\" (random 1000000)))\n       (unwind-protect (progn ,@body)\n         (when (probe-file ,p) (delete-file ,p))))))",
+  "category": "resource-management",
+  "technique": "gensym",
+  "complexity": "advanced",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00262",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 \"/tmp/app.pid\"))\n            (WITH-OPEN-FILE\n                (#:G2 #:G1 :DIRECTION :OUTPUT :IF-EXISTS :SUPERSEDE\n                 :IF-DOES-NOT-EXIST :CREATE)\n              (FORMAT #:G2 \"~A\" (RANDOM 1000000)))\n            (UNWIND-PROTECT (PROGN (SERVE))\n              (WHEN (PROBE-FILE #:G1) (DELETE-FILE #:G1))))\nACTUAL:   (LET ((#:G112 \"/tmp/app.pid\"))\n            (WITH-OPEN-FILE\n                (#:G113 #:G112 :DIRECTION :OUTPUT :IF-EXISTS :SUPERSEDE\n                 :IF-DOES-NOT-EXIST :CREATE)\n              (FORMAT #:G113 \"~A\" (RANDOM 1000000)))\n            (UNWI"
+}

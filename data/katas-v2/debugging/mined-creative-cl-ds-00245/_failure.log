@@ -1,0 +1,17 @@
+MISMATCH
+EXPECTED: (LET ((#:G1
+                 (PROGN
+                  (SETF X 1
+                        Y 2))))
+            (FORMAT *TRACE-OUTPUT* "~&~A = ~S~%" 'X X)
+            (FORMAT *TRACE-OUTPUT* "~&~A = ~S~%" 'Y Y)
+            #:G1)
+ACTUAL:   (LET ((#:G112
+                 (PROGN
+                  (SETF X 1
+                        Y 2))))
+            (FORMAT *TRACE-OUTPUT* "~&~A = ~S~%" 'X X)
+            (FORMAT *TRACE-OUTPUT* "~&~A = ~S~%" 'Y Y)
+            #:G112)
+
+--- stderr ---

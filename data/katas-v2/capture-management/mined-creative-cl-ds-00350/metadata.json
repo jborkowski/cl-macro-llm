@@ -1,0 +1,13 @@
+{
+  "idx": 350,
+  "instruction": "Write a Common Lisp macro `min-max-let` that evaluates two expressions exactly once each, binds the smaller to a user-named min variable and the larger to a user-named max variable, and runs body in their scope.",
+  "reference_defmacro": "(defmacro min-max-let ((mn mx) a b &body body)\n  (let ((ga (gensym)) (gb (gensym)))\n    `(let ((,ga ,a) (,gb ,b))\n       (let ((,mn (min ,ga ,gb)) (,mx (max ,ga ,gb)))\n         ,@body))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00350",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (FIRST XS)) (#:G2 (CAR (LAST XS))))\n            (LET ((LO (MIN #:G1 #:G2)) (HI (MAX #:G1 #:G2)))\n              (LIST LO HI)))\nACTUAL:   (LET ((#:G112 (FIRST XS)) (#:G113 (CAR (LAST XS))))\n            (LET ((LO (MIN #:G112 #:G113)) (HI (MAX #:G112 #:G113)))\n              (LIST LO HI)))\n\n--- stderr ---"
+}

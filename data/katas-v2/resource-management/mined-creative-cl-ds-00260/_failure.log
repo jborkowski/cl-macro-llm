@@ -1,0 +1,9 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 *FOO*))
+            (UNWIND-PROTECT (PROGN (SETF *FOO* 42) (USE-FOO))
+              (SETF *FOO* #:G1)))
+ACTUAL:   (LET ((#:G112 *FOO*))
+            (UNWIND-PROTECT (PROGN (SETF *FOO* 42) (USE-FOO))
+              (SETF *FOO* #:G112)))
+
+--- stderr ---

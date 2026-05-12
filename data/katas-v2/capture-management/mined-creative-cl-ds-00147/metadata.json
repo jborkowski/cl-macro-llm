@@ -1,0 +1,13 @@
+{
+  "idx": 147,
+  "instruction": "Write a Common Lisp macro `appendf-end` that appends a single element to the end of a list place, evaluating the new element exactly once via a hidden gensym binding.",
+  "reference_defmacro": "(defmacro appendf-end (place value)\n  (let ((v (gensym)))\n    `(let ((,v ,value))\n       (setf ,place (append ,place (list ,v))))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00147",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (COMPUTE)))\n            (SETF LST (APPEND LST (LIST #:G1))))\nACTUAL:   (LET ((#:G112 (COMPUTE)))\n            (SETF LST (APPEND LST (LIST #:G112))))\n\n--- stderr ---"
+}

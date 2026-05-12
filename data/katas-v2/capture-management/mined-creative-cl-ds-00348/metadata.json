@@ -1,0 +1,13 @@
+{
+  "idx": 348,
+  "instruction": "Write a Common Lisp macro `squared` that returns the square of an expression while evaluating the expression only once.",
+  "reference_defmacro": "(defmacro squared (x)\n  (let ((g (gensym)))\n    `(let ((,g ,x))\n       (* ,g ,g))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00348",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (RANDOM 100)))\n            (* #:G1 #:G1))\nACTUAL:   (LET ((#:G112 (RANDOM 100)))\n            (* #:G112 #:G112))\n\n--- stderr ---"
+}

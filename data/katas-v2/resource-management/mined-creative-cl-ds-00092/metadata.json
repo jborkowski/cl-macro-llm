@@ -1,0 +1,13 @@
+{
+  "idx": 92,
+  "instruction": "Write a Common Lisp macro `with-shadowed-symbols` that saves the current values of a list of special variables to gensyms, runs body, and restores the originals via unwind-protect. Body is responsible for any mutation.",
+  "reference_defmacro": "(defmacro with-shadowed-symbols ((&rest syms) &body body)\n  (let ((saved (mapcar (lambda (s) (declare (ignore s)) (gensym)) syms)))\n    `(let ,(mapcar (lambda (g s) (list g s)) saved syms)\n       (unwind-protect (progn ,@body)\n         ,@(mapcar (lambda (g s) `(setf ,s ,g)) saved syms)))))",
+  "category": "resource-management",
+  "technique": "gensym",
+  "complexity": "advanced",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00092",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 *X*))\n            (UNWIND-PROTECT (PROGN (SETF *X* 42) (WORK)) (SETF *X* #:G1)))\nACTUAL:   (LET ((#:G112 *X*))\n            (UNWIND-PROTECT (PROGN (SETF *X* 42) (WORK)) (SETF *X* #:G112)))\n\n--- stderr ---"
+}

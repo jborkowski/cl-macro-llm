@@ -1,0 +1,13 @@
+{
+  "idx": 358,
+  "instruction": "Write a Common Lisp predicate macro `multiple-of-p` that tests whether one expression is an integer multiple of another, evaluating each expression exactly once.",
+  "reference_defmacro": "(defmacro multiple-of-p (x y)\n  (let ((gx (gensym)) (gy (gensym)))\n    `(let ((,gx ,x) (,gy ,y))\n       (zerop (mod ,gx ,gy)))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00358",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (COMPUTE)) (#:G2 3))\n            (ZEROP (MOD #:G1 #:G2)))\nACTUAL:   (LET ((#:G112 (COMPUTE)) (#:G113 3))\n            (ZEROP (MOD #:G112 #:G113)))\n\n--- stderr ---"
+}

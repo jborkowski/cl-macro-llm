@@ -1,0 +1,9 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (GET-X)))
+            (CHECK-TYPE #:G1 INTEGER)
+            #:G1)
+ACTUAL:   (LET ((#:G112 (GET-X)))
+            (CHECK-TYPE #:G112 INTEGER)
+            #:G112)
+
+--- stderr ---

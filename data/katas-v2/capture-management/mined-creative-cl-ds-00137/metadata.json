@@ -1,0 +1,13 @@
+{
+  "idx": 137,
+  "instruction": "Write a Common Lisp macro `mulf` that multiplies a place by a factor in place. The factor expression must be evaluated exactly once via a hidden gensym binding (once-only).",
+  "reference_defmacro": "(defmacro mulf (place factor)\n  (let ((g (gensym)))\n    `(let ((,g ,factor))\n       (setf ,place (* ,place ,g)))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00137",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (COMPUTE)))\n            (SETF X (* X #:G1)))\nACTUAL:   (LET ((#:G112 (COMPUTE)))\n            (SETF X (* X #:G112)))\n\n--- stderr ---"
+}

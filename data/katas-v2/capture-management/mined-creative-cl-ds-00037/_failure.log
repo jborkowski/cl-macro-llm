@@ -1,0 +1,7 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (SCORE)))
+            (AND (>= #:G1 0) (<= #:G1 100)))
+ACTUAL:   (LET ((#:G112 (SCORE)))
+            (AND (>= #:G112 0) (<= #:G112 100)))
+
+--- stderr ---

@@ -1,0 +1,31 @@
+ERROR: The variable RESULT is unbound.
+
+--- stderr ---
+
+; file: /tmp/tmptgm5waal.lisp
+; in: DEFMACRO OK
+;     `(WITH-CATCHING-ERRORS (:EXPECTED T :DESCRIPTION ,DESC)
+;       (WITH-DURATION ((,DURATION ,RESULT) ,TEST)
+;        (TEST ,RESULT T ,DESC :DURATION ,DURATION :TEST-FN (LAMBDA (X Y) (EQ # Y))
+;         :GOT-FORM ,TEST)))
+; --> SB-IMPL::|List| SB-IMPL::|List| 
+; ==>
+;   (SB-IMPL::|List| DURATION RESULT)
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::DURATION
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::RESULT
+
+;     (DURATION RESULT)
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::RESULT
+; 
+; compilation unit finished
+;   Undefined functions:
+;     DURATION ONCE-ONLY TEST WITH-GENSYMS
+;   Undefined variables:
+;     DURATION RESULT
+;   caught 3 WARNING conditions

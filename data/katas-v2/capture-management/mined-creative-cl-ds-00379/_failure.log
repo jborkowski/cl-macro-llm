@@ -1,0 +1,7 @@
+MISMATCH
+EXPECTED: (LET* ((#:G1 X) (#:G2 (OFFSET)) (#:G3 (- #:G1 #:G2)))
+            (* #:G3 #:G3))
+ACTUAL:   (LET* ((#:G112 X) (#:G113 (OFFSET)) (#:G114 (- #:G112 #:G113)))
+            (* #:G114 #:G114))
+
+--- stderr ---

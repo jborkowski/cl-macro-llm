@@ -1,0 +1,13 @@
+{
+  "idx": 233,
+  "instruction": "Write a Common Lisp macro `assert-keyword` that signals an error if its argument is not a keyword; otherwise returns the argument. Evaluates the argument once.",
+  "reference_defmacro": "(defmacro assert-keyword (value)\n  (let ((g (gensym)))\n    `(let ((,g ,value))\n       (unless (keywordp ,g)\n         (error \"Expected a keyword, got ~S\" ,g))\n       ,g)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00233",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 MODE))\n            (UNLESS (KEYWORDP #:G1) (ERROR \"Expected a keyword, got ~S\" #:G1))\n            #:G1)\nACTUAL:   (LET ((#:G112 MODE))\n            (UNLESS (KEYWORDP #:G112)\n              (ERROR \"Expected a keyword, got ~S\" #:G112))\n            #:G112)\n\n--- stderr ---"
+}

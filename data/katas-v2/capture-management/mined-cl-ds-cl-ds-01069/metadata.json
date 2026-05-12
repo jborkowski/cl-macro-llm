@@ -1,0 +1,13 @@
+{
+  "idx": 1069,
+  "instruction": "Define a macro that eliminates this repetitive pattern:\n(pop-preprocessor-directive-token token-list :|_Pragma|)\n\nIssue: Macro call that should be transformed by pop-preprocessor-directive-token",
+  "reference_defmacro": "(defmacro pop-preprocessor-directive-token (token-list directive-name &key (errorp t))\n  \"Pops the next token in TOKEN-LIST ignoring `+whitespace-marker+'\"\n  (with-gensyms (head_)\n    `(let ((,head_\n             (check-and-pop-pp-directive-token-1 ,token-list ,directive-name ,errorp)))\n       (if (eq +whitespace-marker+ ,head_)\n           (check-and-pop-pp-directive-token-1 ,token-list ,directive-name ,errorp)\n           ,head_))))",
+  "category": "capture-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 0.9125,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/cl-ds/_rejected/cl-ds-01069",
+  "original_failure_log_excerpt": "ERROR: The function COMMON-LISP-USER::HEAD_ is undefined.\n\n--- stderr ---\n\n; file: /tmp/tmpjcfu629r.lisp\n; in: DEFMACRO POP-PREPROCESSOR-DIRECTIVE-TOKEN\n;     `(LET ((,HEAD_\n;             (CHECK-AND-POP-PP-DIRECTIVE-TOKEN-1 ,TOKEN-LIST ,DIRECTIVE-NAME\n;              ,ERRORP)))\n;        (IF (EQ +WHITESPACE-MARKER+ ,HEAD_)\n;            (CHECK-AND-POP-PP-DIRECTIVE-TOKEN-1 ,TOKEN-LIST ,DIRECTIVE-NAME\n;             ,ERRORP)\n;            ,HEAD_))\n; --> SB-IMPL::|List| \n; ==>\n;   (SB-IMPL::|List| HEAD_\n;                    (SB-IMPL::|List| 'CHECK-AND-POP-PP-DIRECTIVE-TOKEN-1\n;                        "
+}

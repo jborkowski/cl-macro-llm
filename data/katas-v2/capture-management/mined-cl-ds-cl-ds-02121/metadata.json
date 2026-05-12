@@ -1,0 +1,13 @@
+{
+  "idx": 2121,
+  "instruction": "Generate a defmacro form that transforms code like this:\n(ok nil)\n\nPattern to recognize: Macro call that should be transformed by ok",
+  "reference_defmacro": "(defmacro ok (test &optional desc)\n  (with-gensyms (duration result)\n    (once-only (test desc)\n      `(with-catching-errors (:expected T :description ,desc)\n         (with-duration ((,duration ,result) ,test)\n           (test ,result t ,desc\n                 :duration ,duration\n                 :test-fn (lambda (x y)\n                            (eq (not (null x)) y))\n                 :got-form ,test))))))",
+  "category": "capture-management",
+  "technique": "once-only,gensym",
+  "complexity": "intermediate",
+  "quality_score": 0.86,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/cl-ds/_rejected/cl-ds-02121",
+  "original_failure_log_excerpt": "ERROR: The variable RESULT is unbound.\n\n--- stderr ---\n\n; file: /tmp/tmpb923d3xu.lisp\n; in: DEFMACRO OK\n;     `(WITH-CATCHING-ERRORS (:EXPECTED T :DESCRIPTION ,DESC)\n;       (WITH-DURATION ((,DURATION ,RESULT) ,TEST)\n;        (TEST ,RESULT T ,DESC :DURATION ,DURATION :TEST-FN (LAMBDA (X Y) (EQ # Y))\n;         :GOT-FORM ,TEST)))\n; --> SB-IMPL::|List| SB-IMPL::|List| \n; ==>\n;   (SB-IMPL::|List| DURATION RESULT)\n; \n; caught WARNING:\n;   undefined variable: COMMON-LISP-USER::DURATION\n; \n; caught WARNING:\n;   undefined variable: COMMON-LISP-USER::RESULT\n\n;     (DURATION RESULT)\n; \n; caught WARNING:"
+}

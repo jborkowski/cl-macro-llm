@@ -1,0 +1,13 @@
+{
+  "idx": 164,
+  "instruction": "Write a Common Lisp macro `check-not-zero` that evaluates an expression once; if the value is zero, signal an error; otherwise return the value.",
+  "reference_defmacro": "(defmacro check-not-zero (expr)\n  (let ((g (gensym)))\n    `(let ((,g ,expr))\n       (when (zerop ,g) (error \"Value must not be zero\"))\n       ,g)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00164",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (DENOMINATOR X)))\n            (WHEN (ZEROP #:G1) (ERROR \"Value must not be zero\"))\n            #:G1)\nACTUAL:   (LET ((#:G112 (DENOMINATOR X)))\n            (WHEN (ZEROP #:G112) (ERROR \"Value must not be zero\"))\n            #:G112)\n\n--- stderr ---"
+}

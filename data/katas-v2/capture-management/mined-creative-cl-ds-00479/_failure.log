@@ -1,0 +1,7 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (COMPUTE)))
+            (VALUES (FUNCALL #'PRINT #:G1) (FUNCALL #'LOG #:G1)))
+ACTUAL:   (LET ((#:G112 (COMPUTE)))
+            (VALUES (FUNCALL #'PRINT #:G112) (FUNCALL #'LOG #:G112)))
+
+--- stderr ---

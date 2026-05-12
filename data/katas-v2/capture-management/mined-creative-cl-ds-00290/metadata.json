@@ -1,0 +1,13 @@
+{
+  "idx": 290,
+  "instruction": "Write a Common Lisp macro `swap-places` that exchanges the values of two setf-able places using a single gensym to hold one of the two values during the swap.",
+  "reference_defmacro": "(defmacro swap-places (a b)\n  (let ((g (gensym)))\n    `(let ((,g ,a))\n       (setf ,a ,b)\n       (setf ,b ,g))))",
+  "category": "capture-management",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00290",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 X))\n            (SETF X Y)\n            (SETF Y #:G1))\nACTUAL:   (LET ((#:G112 X))\n            (SETF X Y)\n            (SETF Y #:G112))\n\n--- stderr ---"
+}

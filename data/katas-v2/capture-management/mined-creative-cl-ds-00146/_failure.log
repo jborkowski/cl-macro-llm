@@ -1,0 +1,15 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 0))
+            (FLET ((ADD (#:G2)
+                     (INCF #:G1 #:G2)))
+              (ADD 5)
+              (ADD 7)
+              #:G1))
+ACTUAL:   (LET ((#:G112 0))
+            (FLET ((ADD (#:G113)
+                     (INCF #:G112 #:G113)))
+              (ADD 5)
+              (ADD 7)
+              #:G112))
+
+--- stderr ---

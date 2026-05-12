@@ -1,0 +1,13 @@
+{
+  "idx": 286,
+  "instruction": "Write a Common Lisp macro `safe-div` that divides a by b, returning 0 if b is zero. The divisor b must be evaluated only once via a gensym, since it is tested and then divided by.",
+  "reference_defmacro": "(defmacro safe-div (a b)\n  (let ((gb (gensym)))\n    `(let ((,gb ,b))\n       (if (zerop ,gb) 0 (/ ,a ,gb)))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00286",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (DENOMINATOR)))\n            (IF (ZEROP #:G1)\n                0\n                (/ X #:G1)))\nACTUAL:   (LET ((#:G112 (DENOMINATOR)))\n            (IF (ZEROP #:G112)\n                0\n                (/ X #:G112)))\n\n--- stderr ---"
+}

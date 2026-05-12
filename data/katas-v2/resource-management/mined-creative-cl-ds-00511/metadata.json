@@ -1,0 +1,13 @@
+{
+  "idx": 511,
+  "instruction": "Write a Common Lisp macro `with-timer-thread` that spawns a periodic timer thread via `start-timer-thread` running a user action at a given interval, binds the thread handle for the body, and kills it on exit.",
+  "reference_defmacro": "(defmacro with-timer-thread ((thread interval action) &body body)\n  (let ((g (gensym)))\n    `(let ((,g (start-timer-thread ,interval (lambda () ,action))))\n       (let ((,thread ,g))\n         (unwind-protect (progn ,@body)\n           (kill-thread ,g))))))",
+  "category": "resource-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00511",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (START-TIMER-THREAD 1.0 (LAMBDA () (HEARTBEAT)))))\n            (LET ((TT #:G1))\n              (UNWIND-PROTECT (PROGN (LONG-TASK)) (KILL-THREAD #:G1))))\nACTUAL:   (LET ((#:G112 (START-TIMER-THREAD 1.0 (LAMBDA () (HEARTBEAT)))))\n            (LET ((TT #:G112))\n              (UNWIND-PROTECT (PROGN (LONG-TASK)) (KILL-THREAD #:G112))))\n\n--- stderr ---"
+}

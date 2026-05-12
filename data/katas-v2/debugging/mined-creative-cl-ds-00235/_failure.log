@@ -1,0 +1,11 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (SQRT 16)))
+            (FORMAT *TRACE-OUTPUT* "~&CALL ~S~{ ~S~} => ~S~%" 'SQRT (LIST 16)
+                    #:G1)
+            #:G1)
+ACTUAL:   (LET ((#:G112 (SQRT 16)))
+            (FORMAT *TRACE-OUTPUT* "~&CALL ~S~{ ~S~} => ~S~%" 'SQRT (LIST 16)
+                    #:G112)
+            #:G112)
+
+--- stderr ---

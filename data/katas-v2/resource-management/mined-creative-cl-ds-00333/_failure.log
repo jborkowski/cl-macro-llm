@@ -1,0 +1,8 @@
+MISMATCH
+EXPECTED: (LET* ((#:G1 FS) (#:G2 (FILE-POSITION #:G1)))
+            (UNWIND-PROTECT (PROGN (READ-LINE FS)) (FILE-POSITION #:G1 #:G2)))
+ACTUAL:   (LET* ((#:G112 FS) (#:G113 (FILE-POSITION #:G112)))
+            (UNWIND-PROTECT (PROGN (READ-LINE FS))
+              (FILE-POSITION #:G112 #:G113)))
+
+--- stderr ---

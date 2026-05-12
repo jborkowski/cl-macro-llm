@@ -1,0 +1,13 @@
+{
+  "idx": 72,
+  "instruction": "Write a Common Lisp macro `assert-all` that evaluates its first argument once and asserts that every supplied unary predicate symbol holds on the resulting value.",
+  "reference_defmacro": "(defmacro assert-all (value &rest predicates)\n  (let ((g (gensym)))\n    `(let ((,g ,value))\n       ,@(mapcar (lambda (p) `(assert (,p ,g))) predicates)\n       ,g)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00072",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 X))\n            (ASSERT (NUMBERP #:G1))\n            (ASSERT (PLUSP #:G1))\n            #:G1)\nACTUAL:   (LET ((#:G112 X))\n            (ASSERT (NUMBERP #:G112))\n            (ASSERT (PLUSP #:G112))\n            #:G112)\n\n--- stderr ---"
+}

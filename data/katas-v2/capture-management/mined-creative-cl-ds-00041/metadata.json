@@ -1,0 +1,13 @@
+{
+  "idx": 41,
+  "instruction": "Write a Common Lisp macro `abs-of` that returns the absolute value of its argument without invoking abs. The argument expression must be evaluated only once even though both the test and the negation reference it.",
+  "reference_defmacro": "(defmacro abs-of (x)\n  (let ((g (gensym)))\n    `(let ((,g ,x))\n       (if (minusp ,g) (- ,g) ,g))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00041",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (DELTA)))\n            (IF (MINUSP #:G1)\n                (- #:G1)\n                #:G1))\nACTUAL:   (LET ((#:G112 (DELTA)))\n            (IF (MINUSP #:G112)\n                (- #:G112)\n                #:G112))\n\n--- stderr ---"
+}

@@ -1,0 +1,13 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 X))
+            (UNLESS (NUMBERP #:G1) (ERROR "~A failed ~A" #:G1 'NUMBERP))
+            (UNLESS (PLUSP #:G1) (ERROR "~A failed ~A" #:G1 'PLUSP))
+            (UNLESS (INTEGERP #:G1) (ERROR "~A failed ~A" #:G1 'INTEGERP))
+            #:G1)
+ACTUAL:   (LET ((#:G112 X))
+            (UNLESS (NUMBERP #:G112) (ERROR "~A failed ~A" #:G112 'NUMBERP))
+            (UNLESS (PLUSP #:G112) (ERROR "~A failed ~A" #:G112 'PLUSP))
+            (UNLESS (INTEGERP #:G112) (ERROR "~A failed ~A" #:G112 'INTEGERP))
+            #:G112)
+
+--- stderr ---

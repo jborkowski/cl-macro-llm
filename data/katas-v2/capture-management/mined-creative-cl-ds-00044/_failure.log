@@ -1,0 +1,7 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 P) (#:G2 Q))
+            (AND (OR #:G1 #:G2) (NOT (AND #:G1 #:G2))))
+ACTUAL:   (LET ((#:G112 P) (#:G113 Q))
+            (AND (OR #:G112 #:G113) (NOT (AND #:G112 #:G113))))
+
+--- stderr ---

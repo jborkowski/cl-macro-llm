@@ -1,0 +1,13 @@
+{
+  "idx": 303,
+  "instruction": "Write a Common Lisp macro `assert-non-negative` that evaluates an expression once, signals an error if it is negative, and otherwise returns its value.",
+  "reference_defmacro": "(defmacro assert-non-negative (expr)\n  (let ((v (gensym)))\n    `(let ((,v ,expr))\n       (when (minusp ,v)\n         (error \"Expected non-negative, got ~A\" ,v))\n       ,v)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00303",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 SCORE))\n            (WHEN (MINUSP #:G1) (ERROR \"Expected non-negative, got ~A\" #:G1))\n            #:G1)\nACTUAL:   (LET ((#:G112 SCORE))\n            (WHEN (MINUSP #:G112)\n              (ERROR \"Expected non-negative, got ~A\" #:G112))\n            #:G112)\n\n--- stderr ---"
+}

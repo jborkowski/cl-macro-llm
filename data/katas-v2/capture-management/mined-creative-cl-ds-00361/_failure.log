@@ -1,0 +1,15 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 A) (#:G2 B))
+            (SETF A #:G2
+                  B #:G1)
+            (UNWIND-PROTECT (PROGN (PROCESS))
+              (SETF A #:G1
+                    B #:G2)))
+ACTUAL:   (LET ((#:G112 A) (#:G113 B))
+            (SETF A #:G113
+                  B #:G112)
+            (UNWIND-PROTECT (PROGN (PROCESS))
+              (SETF A #:G112
+                    B #:G113)))
+
+--- stderr ---

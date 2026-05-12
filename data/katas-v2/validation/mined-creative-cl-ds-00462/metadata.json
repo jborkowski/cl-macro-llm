@@ -1,0 +1,13 @@
+{
+  "idx": 462,
+  "instruction": "Write a Common Lisp macro `assert-all-plusp` that takes any number of expressions, evaluates each once, and signals an error naming the source form for any one that is not strictly positive.",
+  "reference_defmacro": "(defmacro assert-all-plusp (&rest exprs)\n  `(progn\n     ,@(mapcar (lambda (e)\n                 (let ((g (gensym)))\n                   `(let ((,g ,e))\n                      (unless (plusp ,g) (error \"Expected positive, got ~A from ~S\" ,g ',e)))))\n               exprs)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00462",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (PROGN\n           (LET ((#:G1 X))\n             (UNLESS (PLUSP #:G1)\n               (ERROR \"Expected positive, got ~A from ~S\" #:G1 'X)))\n           (LET ((#:G2 Y))\n             (UNLESS (PLUSP #:G2)\n               (ERROR \"Expected positive, got ~A from ~S\" #:G2 'Y))))\nACTUAL:   (PROGN\n           (LET ((#:G112 X))\n             (UNLESS (PLUSP #:G112)\n               (ERROR \"Expected positive, got ~A from ~S\" #:G112 'X)))\n           (LET ((#:G113 Y))\n             (UNLESS (PLUSP #:G113)\n               (ERROR \"Expected positive, got ~A from ~S\" #:G113 'Y))))\n\n--- stderr ---"
+}

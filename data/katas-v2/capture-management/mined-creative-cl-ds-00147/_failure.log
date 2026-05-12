@@ -1,0 +1,7 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (COMPUTE)))
+            (SETF LST (APPEND LST (LIST #:G1))))
+ACTUAL:   (LET ((#:G112 (COMPUTE)))
+            (SETF LST (APPEND LST (LIST #:G112))))
+
+--- stderr ---

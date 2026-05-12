@@ -1,0 +1,13 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (NUMBERP X)))
+            (UNLESS #:G1
+              (ERROR "Assertion failed: ~S~%Context: ~A" '(NUMBERP X)
+                     "x must be a number"))
+            #:G1)
+ACTUAL:   (LET ((#:G112 (NUMBERP X)))
+            (UNLESS #:G112
+              (ERROR "Assertion failed: ~S~%Context: ~A" '(NUMBERP X)
+                     "x must be a number"))
+            #:G112)
+
+--- stderr ---

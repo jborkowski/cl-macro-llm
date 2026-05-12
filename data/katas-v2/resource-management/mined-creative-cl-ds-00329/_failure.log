@@ -1,0 +1,9 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 B))
+            (PIN-BUFFER #:G1)
+            (UNWIND-PROTECT (PROGN (PROCESS B)) (UNPIN-BUFFER #:G1)))
+ACTUAL:   (LET ((#:G112 B))
+            (PIN-BUFFER #:G112)
+            (UNWIND-PROTECT (PROGN (PROCESS B)) (UNPIN-BUFFER #:G112)))
+
+--- stderr ---

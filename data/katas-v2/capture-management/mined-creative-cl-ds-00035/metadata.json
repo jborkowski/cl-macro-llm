@@ -1,0 +1,13 @@
+{
+  "idx": 35,
+  "instruction": "Write a Common Lisp macro `square-of` that returns the square of its argument, evaluating the argument expression exactly once even though it is referenced twice in the multiplication.",
+  "reference_defmacro": "(defmacro square-of (x)\n  (let ((g (gensym)))\n    `(let ((,g ,x))\n       (* ,g ,g))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00035",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (FOO)))\n            (* #:G1 #:G1))\nACTUAL:   (LET ((#:G112 (FOO)))\n            (* #:G112 #:G112))\n\n--- stderr ---"
+}

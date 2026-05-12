@@ -1,0 +1,13 @@
+MISMATCH
+EXPECTED: (LET* ((#:G1 (GET-INTERNAL-REAL-TIME))
+                 (#:G2 (* 5 INTERNAL-TIME-UNITS-PER-SECOND)))
+            (MULTIPLE-VALUE-PROG1 (PROGN (LONG-COMPUTATION))
+              (WHEN (> (- (GET-INTERNAL-REAL-TIME) #:G1) #:G2)
+                (WARN "Deadline exceeded"))))
+ACTUAL:   (LET* ((#:G112 (GET-INTERNAL-REAL-TIME))
+                 (#:G113 (* 5 INTERNAL-TIME-UNITS-PER-SECOND)))
+            (MULTIPLE-VALUE-PROG1 (PROGN (LONG-COMPUTATION))
+              (WHEN (> (- (GET-INTERNAL-REAL-TIME) #:G112) #:G113)
+                (WARN "Deadline exceeded"))))
+
+--- stderr ---

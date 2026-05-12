@@ -1,0 +1,13 @@
+{
+  "idx": 168,
+  "instruction": "Write a Common Lisp macro `ensure-list` that evaluates an expression once; if the value is a list, return it, otherwise signal an error showing the offending value.",
+  "reference_defmacro": "(defmacro ensure-list (expr)\n  (let ((g (gensym)))\n    `(let ((,g ,expr))\n       (unless (listp ,g) (error \"Expected list, got ~S\" ,g))\n       ,g)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00168",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (GET-ITEMS)))\n            (UNLESS (LISTP #:G1) (ERROR \"Expected list, got ~S\" #:G1))\n            #:G1)\nACTUAL:   (LET ((#:G112 (GET-ITEMS)))\n            (UNLESS (LISTP #:G112) (ERROR \"Expected list, got ~S\" #:G112))\n            #:G112)\n\n--- stderr ---"
+}

@@ -1,0 +1,17 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 DB) (#:G2 NIL))
+            (BEGIN-TRANSACTION #:G1)
+            (UNWIND-PROTECT
+                (MULTIPLE-VALUE-PROG1 (PROGN (INSERT DB ROW)) (SETF #:G2 T))
+              (IF #:G2
+                  (COMMIT-TRANSACTION #:G1)
+                  (ROLLBACK-TRANSACTION #:G1))))
+ACTUAL:   (LET ((#:G112 DB) (#:G113 NIL))
+            (BEGIN-TRANSACTION #:G112)
+            (UNWIND-PROTECT
+                (MULTIPLE-VALUE-PROG1 (PROGN (INSERT DB ROW)) (SETF #:G113 T))
+              (IF #:G113
+                  (COMMIT-TRANSACTION #:G112)
+                  (ROLLBACK-TRANSACTION #:G112))))
+
+--- stderr ---

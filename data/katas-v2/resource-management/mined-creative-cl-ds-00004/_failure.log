@@ -1,0 +1,12 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 *CONFIG*) (#:G2 NIL))
+            (UNWIND-PROTECT
+                (MULTIPLE-VALUE-PROG1 (PROGN (MODIFY *CONFIG*)) (SETF #:G2 T))
+              (UNLESS #:G2 (SETF *CONFIG* #:G1))))
+ACTUAL:   (LET ((#:G112 *CONFIG*) (#:G113 NIL))
+            (UNWIND-PROTECT
+                (MULTIPLE-VALUE-PROG1 (PROGN (MODIFY *CONFIG*))
+                  (SETF #:G113 T))
+              (UNLESS #:G113 (SETF *CONFIG* #:G112))))
+
+--- stderr ---

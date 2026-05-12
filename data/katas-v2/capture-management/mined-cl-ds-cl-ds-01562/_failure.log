@@ -1,0 +1,28 @@
+ERROR: The function COMMON-LISP-USER::HEAD_ is undefined.
+
+--- stderr ---
+
+; file: /tmp/tmpkdehmu1l.lisp
+; in: DEFMACRO POP-PREPROCESSOR-DIRECTIVE-TOKEN
+;     `(LET ((,HEAD_
+;             (CHECK-AND-POP-PP-DIRECTIVE-TOKEN-1 ,TOKEN-LIST ,DIRECTIVE-NAME
+;              ,ERRORP)))
+;        (IF (EQ +WHITESPACE-MARKER+ ,HEAD_)
+;            (CHECK-AND-POP-PP-DIRECTIVE-TOKEN-1 ,TOKEN-LIST ,DIRECTIVE-NAME
+;             ,ERRORP)
+;            ,HEAD_))
+; --> SB-IMPL::|List| 
+; ==>
+;   (SB-IMPL::|List| HEAD_
+;                    (SB-IMPL::|List| 'CHECK-AND-POP-PP-DIRECTIVE-TOKEN-1
+;                                     TOKEN-LIST DIRECTIVE-NAME ERRORP))
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::HEAD_
+; 
+; compilation unit finished
+;   Undefined functions:
+;     HEAD_ WITH-GENSYMS
+;   Undefined variable:
+;     HEAD_
+;   caught 1 WARNING condition

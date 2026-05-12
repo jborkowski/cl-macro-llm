@@ -1,0 +1,15 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (GET-INTERNAL-REAL-TIME)))
+            (LET ((#:G2 (PROGN (FETCH-DATA))))
+              (FORMAT *TRACE-OUTPUT* "~&[~A] ~Fs~%" "fetch"
+                      (/ (- (GET-INTERNAL-REAL-TIME) #:G1)
+                         (FLOAT INTERNAL-TIME-UNITS-PER-SECOND)))
+              #:G2))
+ACTUAL:   (LET ((#:G112 (GET-INTERNAL-REAL-TIME)))
+            (LET ((#:G113 (PROGN (FETCH-DATA))))
+              (FORMAT *TRACE-OUTPUT* "~&[~A] ~Fs~%" "fetch"
+                      (/ (- (GET-INTERNAL-REAL-TIME) #:G112)
+                         (FLOAT INTERNAL-TIME-UNITS-PER-SECOND)))
+              #:G113))
+
+--- stderr ---

@@ -1,0 +1,17 @@
+MISMATCH
+EXPECTED: (PROGN
+           (LET ((#:G1 X))
+             (UNLESS (PLUSP #:G1)
+               (ERROR "Expected positive, got ~A from ~S" #:G1 'X)))
+           (LET ((#:G2 Y))
+             (UNLESS (PLUSP #:G2)
+               (ERROR "Expected positive, got ~A from ~S" #:G2 'Y))))
+ACTUAL:   (PROGN
+           (LET ((#:G112 X))
+             (UNLESS (PLUSP #:G112)
+               (ERROR "Expected positive, got ~A from ~S" #:G112 'X)))
+           (LET ((#:G113 Y))
+             (UNLESS (PLUSP #:G113)
+               (ERROR "Expected positive, got ~A from ~S" #:G113 'Y))))
+
+--- stderr ---

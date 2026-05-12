@@ -1,0 +1,13 @@
+{
+  "idx": 37,
+  "instruction": "Write a Common Lisp macro `between` that tests whether a value lies within an inclusive range. The value subform must be evaluated exactly once even though it is compared against both bounds.",
+  "reference_defmacro": "(defmacro between (x lo hi)\n  (let ((g (gensym)))\n    `(let ((,g ,x))\n       (and (>= ,g ,lo) (<= ,g ,hi)))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00037",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (SCORE)))\n            (AND (>= #:G1 0) (<= #:G1 100)))\nACTUAL:   (LET ((#:G112 (SCORE)))\n            (AND (>= #:G112 0) (<= #:G112 100)))\n\n--- stderr ---"
+}

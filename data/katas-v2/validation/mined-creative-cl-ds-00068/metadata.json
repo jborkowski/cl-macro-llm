@@ -1,0 +1,13 @@
+{
+  "idx": 68,
+  "instruction": "Write a Common Lisp macro `assert-positive` that evaluates its argument once, signals an error if the value is not a positive number, and returns the value otherwise.",
+  "reference_defmacro": "(defmacro assert-positive (expr)\n  (let ((g (gensym)))\n    `(let ((,g ,expr))\n       (unless (and (numberp ,g) (plusp ,g))\n         (error \"Expected positive number, got ~S\" ,g))\n       ,g)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00068",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (- X 1)))\n            (UNLESS (AND (NUMBERP #:G1) (PLUSP #:G1))\n              (ERROR \"Expected positive number, got ~S\" #:G1))\n            #:G1)\nACTUAL:   (LET ((#:G112 (- X 1)))\n            (UNLESS (AND (NUMBERP #:G112) (PLUSP #:G112))\n              (ERROR \"Expected positive number, got ~S\" #:G112))\n            #:G112)\n\n--- stderr ---"
+}

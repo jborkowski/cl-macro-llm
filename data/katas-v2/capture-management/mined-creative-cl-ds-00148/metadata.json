@@ -1,0 +1,13 @@
+{
+  "idx": 148,
+  "instruction": "Write a Common Lisp macro `with-escape` that wraps body in a hidden named block and exposes a user-named local function that, when called, returns from the block with an optional value. The block tag and the argument symbol are both gensyms so the user cannot accidentally collide with them.",
+  "reference_defmacro": "(defmacro with-escape ((escape) &body body)\n  (let ((tag (gensym)) (v (gensym)))\n    `(block ,tag\n       (flet ((,escape (&optional ,v) (return-from ,tag ,v)))\n         ,@body))))",
+  "category": "capture-management",
+  "technique": "closure-capture",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00148",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (BLOCK #:G1\n            (FLET ((BAIL (&OPTIONAL #:G2)\n                     (RETURN-FROM #:G1 #:G2)))\n              (WHEN (BAD?) (BAIL :ERR))\n              (COMPUTE)))\nACTUAL:   (BLOCK #:G112\n            (FLET ((BAIL (&OPTIONAL #:G113)\n                     (RETURN-FROM #:G112 #:G113)))\n              (WHEN (BAD?) (BAIL :ERR))\n              (COMPUTE)))\n\n--- stderr ---"
+}

@@ -1,0 +1,13 @@
+{
+  "idx": 38,
+  "instruction": "Write a Common Lisp macro `clamp` that bounds its first argument between a lower and upper limit. All three subforms must be evaluated exactly once even though each is referenced more than once in the expansion.",
+  "reference_defmacro": "(defmacro clamp (x lo hi)\n  (let ((gx (gensym)) (glo (gensym)) (ghi (gensym)))\n    `(let ((,gx ,x) (,glo ,lo) (,ghi ,hi))\n       (cond ((< ,gx ,glo) ,glo)\n             ((> ,gx ,ghi) ,ghi)\n             (t ,gx)))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00038",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 V) (#:G2 0) (#:G3 255))\n            (COND ((< #:G1 #:G2) #:G2) ((> #:G1 #:G3) #:G3) (T #:G1)))\nACTUAL:   (LET ((#:G112 V) (#:G113 0) (#:G114 255))\n            (COND ((< #:G112 #:G113) #:G113) ((> #:G112 #:G114) #:G114)\n                  (T #:G112)))\n\n--- stderr ---"
+}

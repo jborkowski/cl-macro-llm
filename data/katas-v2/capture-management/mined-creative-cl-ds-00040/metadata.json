@@ -1,0 +1,13 @@
+{
+  "idx": 40,
+  "instruction": "Write a Common Lisp macro `min-of` that returns the smaller of two expressions without calling the built-in min. Both subforms must be evaluated exactly once.",
+  "reference_defmacro": "(defmacro min-of (a b)\n  (let ((ga (gensym)) (gb (gensym)))\n    `(let ((,ga ,a) (,gb ,b))\n       (if (< ,ga ,gb) ,ga ,gb))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00040",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 X) (#:G2 Y))\n            (IF (< #:G1 #:G2)\n                #:G1\n                #:G2))\nACTUAL:   (LET ((#:G112 X) (#:G113 Y))\n            (IF (< #:G112 #:G113)\n                #:G112\n                #:G113))\n\n--- stderr ---"
+}

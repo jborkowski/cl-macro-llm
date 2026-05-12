@@ -1,0 +1,7 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (COMPUTE)))
+            (SETF X (* X #:G1)))
+ACTUAL:   (LET ((#:G112 (COMPUTE)))
+            (SETF X (* X #:G112)))
+
+--- stderr ---

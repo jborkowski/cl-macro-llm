@@ -1,0 +1,10 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 NAME))
+            (UNLESS (SYMBOLP #:G1) (ERROR "Expected a symbol, got ~S" #:G1))
+            #:G1)
+ACTUAL:   (LET ((#:G112 NAME))
+            (UNLESS (SYMBOLP #:G112)
+              (ERROR "Expected a symbol, got ~S" #:G112))
+            #:G112)
+
+--- stderr ---

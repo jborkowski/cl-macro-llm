@@ -1,0 +1,13 @@
+{
+  "idx": 289,
+  "instruction": "Write a Common Lisp macro `do-times-by` that runs body with an internal counter going from 0 up to n exclusive, advancing by step each iteration. Bind n, step, and the counter to gensyms so the user's body cannot see or shadow them.",
+  "reference_defmacro": "(defmacro do-times-by (n step &body body)\n  (let ((g-n (gensym)) (g-step (gensym)) (i (gensym)))\n    `(let ((,g-n ,n) (,g-step ,step))\n       (do ((,i 0 (+ ,i ,g-step)))\n           ((>= ,i ,g-n))\n         ,@body))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00289",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 10) (#:G2 2))\n            (DO ((#:G3 0 (+ #:G3 #:G2))) ((>= #:G3 #:G1)) (PRINT :TICK)))\nACTUAL:   (LET ((#:G112 10) (#:G113 2))\n            (DO ((#:G114 0 (+ #:G114 #:G113)))\n                ((>= #:G114 #:G112))\n              (PRINT :TICK)))\n\n--- stderr ---"
+}

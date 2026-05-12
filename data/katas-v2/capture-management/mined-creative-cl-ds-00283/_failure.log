@@ -1,0 +1,7 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (FOO)) (#:G2 (BAR)))
+            (SQRT (+ (* #:G1 #:G1) (* #:G2 #:G2))))
+ACTUAL:   (LET ((#:G112 (FOO)) (#:G113 (BAR)))
+            (SQRT (+ (* #:G112 #:G112) (* #:G113 #:G113))))
+
+--- stderr ---

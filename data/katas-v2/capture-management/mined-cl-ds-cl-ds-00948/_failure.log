@@ -1,0 +1,70 @@
+ERROR: The variable RESULT is unbound.
+
+--- stderr ---
+
+; file: /tmp/tmp9pcppcxo.lisp
+; in: DEFMACRO IS
+;     `(LET* ((,NEW-ARGS (LIST ,@ARGS))
+;             (,DESC (PARSE-DESCRIPTION-AND-TEST ,NEW-ARGS)))
+;        (WITH-CATCHING-ERRORS (:DESCRIPTION ,DESC :EXPECTED ,EXPECTED)
+;         (WITH-DURATION ((,DURATION ,RESULT) ,GOT)
+;          (TEST ,RESULT ,EXPECTED ,NEW-ARGS :DURATION ,DURATION))))
+; --> SB-IMPL::|List| 
+; ==>
+;   (SB-IMPL::|List| DESC (SB-IMPL::|List| 'PARSE-DESCRIPTION-AND-TEST NEW-ARGS))
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::DESC
+
+;     (DURATION RESULT NEW-ARGS DESC)
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::DESC
+
+;     `(LET* ((,NEW-ARGS (LIST ,@ARGS))
+;             (,DESC (PARSE-DESCRIPTION-AND-TEST ,NEW-ARGS)))
+;        (WITH-CATCHING-ERRORS (:DESCRIPTION ,DESC :EXPECTED ,EXPECTED)
+;         (WITH-DURATION ((,DURATION ,RESULT) ,GOT)
+;          (TEST ,RESULT ,EXPECTED ,NEW-ARGS :DURATION ,DURATION))))
+; --> SB-IMPL::|List| SB-IMPL::|List| SB-IMPL::|List| 
+; ==>
+;   (SB-IMPL::|List| DURATION RESULT)
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::DURATION
+
+; --> SB-IMPL::|List| 
+; ==>
+;   (SB-IMPL::|List| NEW-ARGS (SB-IMPL::|List*| 'LIST ARGS))
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::NEW-ARGS
+
+;     (DURATION RESULT NEW-ARGS DESC)
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::NEW-ARGS
+
+;     `(LET* ((,NEW-ARGS (LIST ,@ARGS))
+;             (,DESC (PARSE-DESCRIPTION-AND-TEST ,NEW-ARGS)))
+;        (WITH-CATCHING-ERRORS (:DESCRIPTION ,DESC :EXPECTED ,EXPECTED)
+;         (WITH-DURATION ((,DURATION ,RESULT) ,GOT)
+;          (TEST ,RESULT ,EXPECTED ,NEW-ARGS :DURATION ,DURATION))))
+; --> SB-IMPL::|List| SB-IMPL::|List| SB-IMPL::|List| 
+; ==>
+;   (SB-IMPL::|List| DURATION RESULT)
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::RESULT
+
+;     (DURATION RESULT NEW-ARGS DESC)
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::RESULT
+; 
+; compilation unit finished
+;   Undefined functions:
+;     DURATION EXPECTED ONCE-ONLY WITH-GENSYMS
+;   Undefined variables:
+;     DESC DURATION NEW-ARGS RESULT
+;   caught 7 WARNING conditions

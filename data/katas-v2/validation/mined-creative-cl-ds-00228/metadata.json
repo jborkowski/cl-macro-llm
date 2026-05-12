@@ -1,0 +1,13 @@
+{
+  "idx": 228,
+  "instruction": "Write a Common Lisp macro `assert-length` that evaluates a sequence and an expected length once each, signals an error if the lengths differ, and returns the sequence otherwise.",
+  "reference_defmacro": "(defmacro assert-length (seq n)\n  (let ((s (gensym)) (m (gensym)))\n    `(let ((,s ,seq) (,m ,n))\n       (unless (= (length ,s) ,m)\n         (error \"Expected length ~S, got ~S\" ,m (length ,s)))\n       ,s)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00228",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 PAIR) (#:G2 2))\n            (UNLESS (= (LENGTH #:G1) #:G2)\n              (ERROR \"Expected length ~S, got ~S\" #:G2 (LENGTH #:G1)))\n            #:G1)\nACTUAL:   (LET ((#:G112 PAIR) (#:G113 2))\n            (UNLESS (= (LENGTH #:G112) #:G113)\n              (ERROR \"Expected length ~S, got ~S\" #:G113 (LENGTH #:G112)))\n            #:G112)\n\n--- stderr ---"
+}

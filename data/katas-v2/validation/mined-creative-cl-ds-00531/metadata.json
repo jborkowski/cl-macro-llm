@@ -1,0 +1,13 @@
+{
+  "idx": 531,
+  "instruction": "Write a Common Lisp macro `ensure-list-of` that evaluates a list-producing expression once and asserts that every element satisfies a given predicate, signaling an error on the first violation. Returns the list. Use gensyms for the list and per-element variables.",
+  "reference_defmacro": "(defmacro ensure-list-of (pred list-expr)\n  (let ((lst (gensym)) (item (gensym)))\n    `(let ((,lst ,list-expr))\n       (dolist (,item ,lst)\n         (unless (,pred ,item)\n           (error \"Element ~S fails ~S\" ,item ',pred)))\n       ,lst)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00531",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (GET-NUMS)))\n            (DOLIST (#:G2 #:G1)\n              (UNLESS (INTEGERP #:G2)\n                (ERROR \"Element ~S fails ~S\" #:G2 'INTEGERP)))\n            #:G1)\nACTUAL:   (LET ((#:G112 (GET-NUMS)))\n            (DOLIST (#:G113 #:G112)\n              (UNLESS (INTEGERP #:G113)\n                (ERROR \"Element ~S fails ~S\" #:G113 'INTEGERP)))\n            #:G112)\n\n--- stderr ---"
+}

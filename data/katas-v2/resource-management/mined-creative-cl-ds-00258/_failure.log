@@ -1,0 +1,13 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (MAKE-STRING-OUTPUT-STREAM)))
+            (LET ((*STANDARD-OUTPUT* #:G1))
+              (PRINC "hi")
+              (PRINC "!"))
+            (GET-OUTPUT-STREAM-STRING #:G1))
+ACTUAL:   (LET ((#:G112 (MAKE-STRING-OUTPUT-STREAM)))
+            (LET ((*STANDARD-OUTPUT* #:G112))
+              (PRINC "hi")
+              (PRINC "!"))
+            (GET-OUTPUT-STREAM-STRING #:G112))
+
+--- stderr ---

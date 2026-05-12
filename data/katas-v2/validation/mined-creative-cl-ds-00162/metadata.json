@@ -1,0 +1,13 @@
+{
+  "idx": 162,
+  "instruction": "Write a Common Lisp macro `ensure-integer` that evaluates an expression once; if the value is an integer return it, otherwise signal an error mentioning the offending value.",
+  "reference_defmacro": "(defmacro ensure-integer (expr)\n  (let ((g (gensym)))\n    `(let ((,g ,expr))\n       (if (integerp ,g) ,g (error \"Not an integer: ~A\" ,g)))))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00162",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (READ)))\n            (IF (INTEGERP #:G1)\n                #:G1\n                (ERROR \"Not an integer: ~A\" #:G1)))\nACTUAL:   (LET ((#:G112 (READ)))\n            (IF (INTEGERP #:G112)\n                #:G112\n                (ERROR \"Not an integer: ~A\" #:G112)))\n\n--- stderr ---"
+}

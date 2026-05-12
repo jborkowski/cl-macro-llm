@@ -1,0 +1,13 @@
+{
+  "idx": 143,
+  "instruction": "Write a Common Lisp macro `do-pairs` that walks a list two elements at a time, binding each pair to user-named symbols. The walking pointer is held in a hidden gensym so the list expression is evaluated once.",
+  "reference_defmacro": "(defmacro do-pairs ((a b list) &body body)\n  (let ((g (gensym)))\n    `(let ((,g ,list))\n       (loop while ,g\n             do (let ((,a (pop ,g))\n                      (,b (pop ,g)))\n                  ,@body)))))",
+  "category": "capture-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00143",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 LST))\n            (LOOP WHILE #:G1\n                  DO (LET ((K (POP #:G1)) (V (POP #:G1)))\n                       (PRINT (CONS K V)))))\nACTUAL:   (LET ((#:G112 LST))\n            (LOOP WHILE #:G112\n                  DO (LET ((K (POP #:G112)) (V (POP #:G112)))\n                       (PRINT (CONS K V)))))\n\n--- stderr ---"
+}

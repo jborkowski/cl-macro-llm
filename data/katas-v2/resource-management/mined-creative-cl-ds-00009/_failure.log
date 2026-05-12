@@ -1,0 +1,10 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 "compute"))
+            (FORMAT T "~&Enter ~A~%" #:G1)
+            (UNWIND-PROTECT (PROGN (HEAVY-WORK)) (FORMAT T "~&Exit ~A~%" #:G1)))
+ACTUAL:   (LET ((#:G112 "compute"))
+            (FORMAT T "~&Enter ~A~%" #:G112)
+            (UNWIND-PROTECT (PROGN (HEAVY-WORK))
+              (FORMAT T "~&Exit ~A~%" #:G112)))
+
+--- stderr ---

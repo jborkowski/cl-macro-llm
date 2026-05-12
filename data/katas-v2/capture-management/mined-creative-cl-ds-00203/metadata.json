@@ -1,0 +1,13 @@
+{
+  "idx": 203,
+  "instruction": "Write a Common Lisp macro `nif` (numeric if) that evaluates an expression once and dispatches to one of three branches based on whether the value is positive, zero, or negative.",
+  "reference_defmacro": "(defmacro nif (expr pos zero neg)\n  (let ((v (gensym)))\n    `(let ((,v ,expr))\n       (cond ((plusp ,v) ,pos)\n             ((zerop ,v) ,zero)\n             (t ,neg)))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00203",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (- A B)))\n            (COND ((PLUSP #:G1) :POSITIVE) ((ZEROP #:G1) :EQUAL) (T :NEGATIVE)))\nACTUAL:   (LET ((#:G112 (- A B)))\n            (COND ((PLUSP #:G112) :POSITIVE) ((ZEROP #:G112) :EQUAL)\n                  (T :NEGATIVE)))\n\n--- stderr ---"
+}

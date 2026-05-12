@@ -1,0 +1,9 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (FIRST XS)) (#:G2 (CAR (LAST XS))))
+            (LET ((LO (MIN #:G1 #:G2)) (HI (MAX #:G1 #:G2)))
+              (LIST LO HI)))
+ACTUAL:   (LET ((#:G112 (FIRST XS)) (#:G113 (CAR (LAST XS))))
+            (LET ((LO (MIN #:G112 #:G113)) (HI (MAX #:G112 #:G113)))
+              (LIST LO HI)))
+
+--- stderr ---

@@ -1,0 +1,13 @@
+{
+  "idx": 529,
+  "instruction": "Write a Common Lisp macro `must-satisfy` that evaluates an expression once, signals a descriptive error if the value does not satisfy the given predicate, and otherwise returns the value. Use gensym to avoid re-evaluating the expression.",
+  "reference_defmacro": "(defmacro must-satisfy (pred expr)\n  (let ((v (gensym)))\n    `(let ((,v ,expr))\n       (unless (,pred ,v)\n         (error \"~S failed predicate ~S\" ,v ',pred))\n       ,v)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00529",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (COMPUTE-VALUE)))\n            (UNLESS (PLUSP #:G1) (ERROR \"~S failed predicate ~S\" #:G1 'PLUSP))\n            #:G1)\nACTUAL:   (LET ((#:G112 (COMPUTE-VALUE)))\n            (UNLESS (PLUSP #:G112)\n              (ERROR \"~S failed predicate ~S\" #:G112 'PLUSP))\n            #:G112)\n\n--- stderr ---"
+}

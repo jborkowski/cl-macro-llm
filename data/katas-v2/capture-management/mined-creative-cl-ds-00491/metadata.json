@@ -1,0 +1,13 @@
+{
+  "idx": 491,
+  "instruction": "Write a Common Lisp macro `define-memoized` that defines a function with a private cache hash-table. Repeated calls with equal argument lists return the cached value. The cache, the lookup key, and the multiple-value-bind temporaries must all be hidden behind gensyms so they cannot clash with user code in body.",
+  "reference_defmacro": "(defmacro define-memoized (name args &body body)\n  (let ((g-cache (gensym)) (g-key (gensym)) (g-val (gensym)) (g-found (gensym)))\n    `(let ((,g-cache (make-hash-table :test 'equal)))\n       (defun ,name ,args\n         (let ((,g-key (list ,@args)))\n           (multiple-value-bind (,g-val ,g-found) (gethash ,g-key ,g-cache)\n             (if ,g-found\n                 ,g-val\n                 (setf (gethash ,g-key ,g-cache) (progn ,@body)))))))))",
+  "category": "capture-management",
+  "technique": "closure-capture",
+  "complexity": "advanced",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00491",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (MAKE-HASH-TABLE :TEST 'EQUAL)))\n            (DEFUN SLOW-FN (N)\n              (LET ((#:G2 (LIST N)))\n                (MULTIPLE-VALUE-BIND (#:G3 #:G4)\n                    (GETHASH #:G2 #:G1)\n                  (IF #:G4\n                      #:G3\n                      (SETF (GETHASH #:G2 #:G1) (PROGN (* N N))))))))\nACTUAL:   (LET ((#:G112 (MAKE-HASH-TABLE :TEST 'EQUAL)))\n            (DEFUN SLOW-FN (N)\n              (LET ((#:G113 (LIST N)))\n                (MULTIPLE-VALUE-BIND (#:G114 #:G115)\n                    (GETHASH #:G113 #:G112)\n                  (IF #:G115\n  "
+}

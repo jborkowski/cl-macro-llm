@@ -1,0 +1,13 @@
+{
+  "idx": 1,
+  "instruction": "Write a Common Lisp macro `with-mutex-held` that acquires a lock via `acquire-lock`, executes the body, and guarantees release via `release-lock` even on non-local exit. The mutex expression is evaluated only once.",
+  "reference_defmacro": "(defmacro with-mutex-held ((mutex) &body body)\n  (let ((g (gensym)))\n    `(let ((,g ,mutex))\n       (acquire-lock ,g)\n       (unwind-protect (progn ,@body)\n         (release-lock ,g)))))",
+  "category": "resource-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00001",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 *LOCK*))\n            (ACQUIRE-LOCK #:G1)\n            (UNWIND-PROTECT (PROGN (INCF *COUNTER*)) (RELEASE-LOCK #:G1)))\nACTUAL:   (LET ((#:G112 *LOCK*))\n            (ACQUIRE-LOCK #:G112)\n            (UNWIND-PROTECT (PROGN (INCF *COUNTER*)) (RELEASE-LOCK #:G112)))\n\n--- stderr ---"
+}

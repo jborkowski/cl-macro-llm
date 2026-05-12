@@ -1,0 +1,7 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (COMPUTE-BOUND)))
+            (DOTIMES (I #:G1) (USE I)))
+ACTUAL:   (LET ((#:G112 (COMPUTE-BOUND)))
+            (DOTIMES (I #:G112) (USE I)))
+
+--- stderr ---

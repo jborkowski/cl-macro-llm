@@ -1,0 +1,11 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (DENOMINATOR)))
+            (IF (ZEROP #:G1)
+                0
+                (/ X #:G1)))
+ACTUAL:   (LET ((#:G112 (DENOMINATOR)))
+            (IF (ZEROP #:G112)
+                0
+                (/ X #:G112)))
+
+--- stderr ---

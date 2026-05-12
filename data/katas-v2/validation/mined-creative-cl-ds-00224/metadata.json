@@ -1,0 +1,13 @@
+{
+  "idx": 224,
+  "instruction": "Write a Common Lisp macro `assert-non-empty` that evaluates a sequence expression once, signals an error if the sequence is empty, and returns the sequence otherwise.",
+  "reference_defmacro": "(defmacro assert-non-empty (seq)\n  (let ((g (gensym)))\n    `(let ((,g ,seq))\n       (when (zerop (length ,g))\n         (error \"Sequence is empty\"))\n       ,g)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00224",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 ITEMS))\n            (WHEN (ZEROP (LENGTH #:G1)) (ERROR \"Sequence is empty\"))\n            #:G1)\nACTUAL:   (LET ((#:G112 ITEMS))\n            (WHEN (ZEROP (LENGTH #:G112)) (ERROR \"Sequence is empty\"))\n            #:G112)\n\n--- stderr ---"
+}

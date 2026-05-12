@@ -1,0 +1,13 @@
+{
+  "idx": 10,
+  "instruction": "Write a Common Lisp macro `with-temporary-directory` that ensures a directory exists, binds a user variable to its pathname, runs the body, and deletes the directory tree afterwards. The path expression must be evaluated once.",
+  "reference_defmacro": "(defmacro with-temporary-directory ((var path) &body body)\n  (let ((g (gensym)))\n    `(let* ((,g ,path) (,var ,g))\n       (ensure-directories-exist ,g)\n       (unwind-protect (progn ,@body)\n         (delete-directory ,g)))))",
+  "category": "resource-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00010",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET* ((#:G1 #P\"/tmp/work/\") (D #:G1))\n            (ENSURE-DIRECTORIES-EXIST #:G1)\n            (UNWIND-PROTECT (PROGN (PROCESS D)) (DELETE-DIRECTORY #:G1)))\nACTUAL:   (LET* ((#:G112 #P\"/tmp/work/\") (D #:G112))\n            (ENSURE-DIRECTORIES-EXIST #:G112)\n            (UNWIND-PROTECT (PROGN (PROCESS D)) (DELETE-DIRECTORY #:G112)))\n\n--- stderr ---"
+}

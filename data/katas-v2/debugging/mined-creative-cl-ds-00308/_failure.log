@@ -1,0 +1,13 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 "step1"))
+            (FORMAT *TRACE-OUTPUT* "~&ENTER ~A~%" #:G1)
+            (LET ((#:G2 (PROGN (DO-WORK))))
+              (FORMAT *TRACE-OUTPUT* "~&EXIT ~A => ~S~%" #:G1 #:G2)
+              #:G2))
+ACTUAL:   (LET ((#:G112 "step1"))
+            (FORMAT *TRACE-OUTPUT* "~&ENTER ~A~%" #:G112)
+            (LET ((#:G113 (PROGN (DO-WORK))))
+              (FORMAT *TRACE-OUTPUT* "~&EXIT ~A => ~S~%" #:G112 #:G113)
+              #:G113))
+
+--- stderr ---

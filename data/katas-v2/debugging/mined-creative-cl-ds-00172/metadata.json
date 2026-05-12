@@ -1,0 +1,13 @@
+{
+  "idx": 172,
+  "instruction": "Write a Common Lisp macro `trace-block` that prints ENTER and EXIT markers around a body of code (with a user-supplied label), and returns the body's value.",
+  "reference_defmacro": "(defmacro trace-block (label &body body)\n  (let ((g (gensym)))\n    `(progn\n       (format *trace-output* \"~&[ENTER ~A]~%\" ,label)\n       (let ((,g (progn ,@body)))\n         (format *trace-output* \"~&[EXIT ~A]~%\" ,label)\n         ,g))))",
+  "category": "debugging",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00172",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (PROGN\n           (FORMAT *TRACE-OUTPUT* \"~&[ENTER ~A]~%\" \"foo\")\n           (LET ((#:G1 (PROGN (COMPUTE))))\n             (FORMAT *TRACE-OUTPUT* \"~&[EXIT ~A]~%\" \"foo\")\n             #:G1))\nACTUAL:   (PROGN\n           (FORMAT *TRACE-OUTPUT* \"~&[ENTER ~A]~%\" \"foo\")\n           (LET ((#:G112 (PROGN (COMPUTE))))\n             (FORMAT *TRACE-OUTPUT* \"~&[EXIT ~A]~%\" \"foo\")\n             #:G112))\n\n--- stderr ---"
+}

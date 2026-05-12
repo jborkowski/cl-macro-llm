@@ -1,0 +1,9 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (START-TIMER-THREAD 1.0 (LAMBDA () (HEARTBEAT)))))
+            (LET ((TT #:G1))
+              (UNWIND-PROTECT (PROGN (LONG-TASK)) (KILL-THREAD #:G1))))
+ACTUAL:   (LET ((#:G112 (START-TIMER-THREAD 1.0 (LAMBDA () (HEARTBEAT)))))
+            (LET ((TT #:G112))
+              (UNWIND-PROTECT (PROGN (LONG-TASK)) (KILL-THREAD #:G112))))
+
+--- stderr ---

@@ -1,0 +1,13 @@
+{
+  "idx": 305,
+  "instruction": "Write a Common Lisp macro `ensure-not-nil` that evaluates an expression once, signals an error if the value is nil, and otherwise returns the value.",
+  "reference_defmacro": "(defmacro ensure-not-nil (expr)\n  (let ((v (gensym)))\n    `(let ((,v ,expr))\n       (when (null ,v)\n         (error \"Expected non-nil value\"))\n       ,v)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00305",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (FIND-USER ID)))\n            (WHEN (NULL #:G1) (ERROR \"Expected non-nil value\"))\n            #:G1)\nACTUAL:   (LET ((#:G112 (FIND-USER ID)))\n            (WHEN (NULL #:G112) (ERROR \"Expected non-nil value\"))\n            #:G112)\n\n--- stderr ---"
+}

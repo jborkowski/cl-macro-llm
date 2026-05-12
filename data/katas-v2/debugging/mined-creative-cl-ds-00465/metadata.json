@@ -1,0 +1,13 @@
+{
+  "idx": 465,
+  "instruction": "Write a Common Lisp macro `with-call-counter` that introduces a local function which, each time it is called, increments a hidden counter. After the body completes, the macro prints how many times that function was invoked.",
+  "reference_defmacro": "(defmacro with-call-counter ((name) &body body)\n  (let ((counter (gensym)))\n    `(let ((,counter 0))\n       (flet ((,name () (incf ,counter)))\n         ,@body)\n       (format *trace-output* \"~&~A called ~D times~%\" ',name ,counter))))",
+  "category": "debugging",
+  "technique": "gensym",
+  "complexity": "advanced",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00465",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 0))\n            (FLET ((TICK ()\n                     (INCF #:G1)))\n              (DOTIMES (I 5) (TICK)))\n            (FORMAT *TRACE-OUTPUT* \"~&~A called ~D times~%\" 'TICK #:G1))\nACTUAL:   (LET ((#:G112 0))\n            (FLET ((TICK ()\n                     (INCF #:G112)))\n              (DOTIMES (I 5) (TICK)))\n            (FORMAT *TRACE-OUTPUT* \"~&~A called ~D times~%\" 'TICK #:G112))\n\n--- stderr ---"
+}

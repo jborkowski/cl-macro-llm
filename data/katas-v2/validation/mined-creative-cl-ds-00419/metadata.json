@@ -1,0 +1,13 @@
+{
+  "idx": 419,
+  "instruction": "Write a Common Lisp macro `must-be` that asserts a value satisfies a unary predicate. The value is evaluated once; an error is signaled if the predicate returns nil; otherwise the value is returned.",
+  "reference_defmacro": "(defmacro must-be (predicate value)\n  (let ((g (gensym)))\n    `(let ((,g ,value))\n       (unless (,predicate ,g)\n         (error \"~S does not satisfy ~S\" ,g ',predicate))\n       ,g)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00419",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 NAME))\n            (UNLESS (STRINGP #:G1)\n              (ERROR \"~S does not satisfy ~S\" #:G1 'STRINGP))\n            #:G1)\nACTUAL:   (LET ((#:G112 NAME))\n            (UNLESS (STRINGP #:G112)\n              (ERROR \"~S does not satisfy ~S\" #:G112 'STRINGP))\n            #:G112)\n\n--- stderr ---"
+}

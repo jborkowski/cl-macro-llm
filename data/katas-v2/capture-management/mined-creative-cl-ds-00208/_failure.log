@@ -1,0 +1,7 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (COMPUTE)) (#:G2 0) (#:G3 100))
+            (AND (>= #:G1 #:G2) (<= #:G1 #:G3)))
+ACTUAL:   (LET ((#:G112 (COMPUTE)) (#:G113 0) (#:G114 100))
+            (AND (>= #:G112 #:G113) (<= #:G112 #:G114)))
+
+--- stderr ---

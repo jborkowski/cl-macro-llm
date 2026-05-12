@@ -1,0 +1,13 @@
+{
+  "idx": 73,
+  "instruction": "Write a Common Lisp macro `assert-equal` that evaluates two expressions each once and signals an error if they are not EQUAL. Returns the first value when they match.",
+  "reference_defmacro": "(defmacro assert-equal (a b)\n  (let ((ga (gensym)) (gb (gensym)))\n    `(let ((,ga ,a) (,gb ,b))\n       (unless (equal ,ga ,gb)\n         (error \"Expected ~S to equal ~S\" ,ga ,gb))\n       ,ga)))",
+  "category": "validation",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00073",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (COMPUTE)) (#:G2 EXPECTED))\n            (UNLESS (EQUAL #:G1 #:G2)\n              (ERROR \"Expected ~S to equal ~S\" #:G1 #:G2))\n            #:G1)\nACTUAL:   (LET ((#:G112 (COMPUTE)) (#:G113 EXPECTED))\n            (UNLESS (EQUAL #:G112 #:G113)\n              (ERROR \"Expected ~S to equal ~S\" #:G112 #:G113))\n            #:G112)\n\n--- stderr ---"
+}

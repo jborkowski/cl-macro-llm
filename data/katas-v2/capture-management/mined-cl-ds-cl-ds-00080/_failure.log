@@ -1,0 +1,80 @@
+ERROR: The variable DURATION is unbound.
+
+--- stderr ---
+
+; file: /tmp/tmpn0enj31g.lisp
+; in: DEFMACRO IS-PRINT
+;     `(WITH-CATCHING-ERRORS (:DESCRIPTION ,DESC :EXPECTED ,EXPECTED)
+;       (LET* (,DURATION (,OUTPUT (WITH-OUTPUT-TO-STRING # #)))
+;         (TEST ,OUTPUT ,EXPECTED ,DESC :DURATION ,DURATION :GOT-FORM ',GOT
+;          :TEST-FN #'STRING= :REPORT-EXPECTED-LABEL "output")))
+; --> SB-IMPL::|List| 
+; ==>
+;   (SB-IMPL::|List| DURATION
+;                    (SB-IMPL::|List| OUTPUT
+;                                     (SB-IMPL::|List| 'WITH-OUTPUT-TO-STRING
+;                                                      '(*STANDARD-OUTPUT*)
+;                                                      (SB-IMPL::|List|
+;                                                       'WITH-DURATION
+;                                                       (SB-IMPL::|List| # GOT)
+;                                                       (SB-IMPL::|List| 'DECLARE
+;                                                                        #)
+;                                                       (SB-IMPL::|List| 'SETQ
+;                                                                        DURATION
+;                                                                        DURATION-INNER)))))
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::DURATION
+
+;     (OUTPUT DURATION DURATION-INNER)
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::DURATION
+
+;     `(WITH-CATCHING-ERRORS (:DESCRIPTION ,DESC :EXPECTED ,EXPECTED)
+;       (LET* (,DURATION (,OUTPUT (WITH-OUTPUT-TO-STRING # #)))
+;         (TEST ,OUTPUT ,EXPECTED ,DESC :DURATION ,DURATION :GOT-FORM ',GOT
+;          :TEST-FN #'STRING= :REPORT-EXPECTED-LABEL "output")))
+; --> SB-IMPL::|List| SB-IMPL::|List| SB-IMPL::|List| SB-IMPL::|List| 
+; --> SB-IMPL::|List| SB-IMPL::|List| 
+; ==>
+;   (SB-IMPL::|List| DURATION-INNER OUTPUT)
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::DURATION-INNER
+
+;     (OUTPUT DURATION DURATION-INNER)
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::DURATION-INNER
+
+;     `(WITH-CATCHING-ERRORS (:DESCRIPTION ,DESC :EXPECTED ,EXPECTED)
+;       (LET* (,DURATION (,OUTPUT (WITH-OUTPUT-TO-STRING # #)))
+;         (TEST ,OUTPUT ,EXPECTED ,DESC :DURATION ,DURATION :GOT-FORM ',GOT
+;          :TEST-FN #'STRING= :REPORT-EXPECTED-LABEL "output")))
+; --> SB-IMPL::|List| SB-IMPL::|List| 
+; ==>
+;   (SB-IMPL::|List| OUTPUT
+;                    (SB-IMPL::|List| 'WITH-OUTPUT-TO-STRING '(*STANDARD-OUTPUT*)
+;                                     (SB-IMPL::|List| 'WITH-DURATION
+;                                                      (SB-IMPL::|List|
+;                                                       (SB-IMPL::|List|
+;                                                        DURATION-INNER OUTPUT)
+;                                                       GOT)
+;                                                      (SB-IMPL::|List| 'DECLARE
+;                                                                       (SB-IMPL::|List|
+;                                                                        'IGNORE
+;                                                                        OUTPUT))
+;                                                      (SB-IMPL::|List| 'SETQ
+;                                                                       DURATION
+;                                                                       DURATION-INNER))))
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::OUTPUT
+; 
+; compilation unit finished
+;   Undefined functions:
+;     EXPECTED ONCE-ONLY OUTPUT WITH-GENSYMS
+;   Undefined variables:
+;     DURATION DURATION-INNER OUTPUT
+;   caught 5 WARNING conditions

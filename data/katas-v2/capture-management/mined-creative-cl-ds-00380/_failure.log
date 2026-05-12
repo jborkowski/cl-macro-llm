@@ -1,0 +1,11 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (COMPUTE)) (#:G2 (FLOOR-VAL)))
+            (IF (< #:G1 #:G2)
+                #:G2
+                #:G1))
+ACTUAL:   (LET ((#:G112 (COMPUTE)) (#:G113 (FLOOR-VAL)))
+            (IF (< #:G112 #:G113)
+                #:G113
+                #:G112))
+
+--- stderr ---

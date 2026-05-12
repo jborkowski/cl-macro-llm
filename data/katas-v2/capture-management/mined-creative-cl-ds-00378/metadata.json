@@ -1,0 +1,13 @@
+{
+  "idx": 378,
+  "instruction": "Write a Common Lisp macro `unless-equal` that runs body forms only when two expressions `a` and `b` are not EQUAL. Each expression must be evaluated exactly once.",
+  "reference_defmacro": "(defmacro unless-equal (a b &body body)\n  (let ((av (gensym)) (bv (gensym)))\n    `(let ((,av ,a) (,bv ,b))\n       (unless (equal ,av ,bv) ,@body))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00378",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (LEFT)) (#:G2 (RIGHT)))\n            (UNLESS (EQUAL #:G1 #:G2) (WARN \"diff\")))\nACTUAL:   (LET ((#:G112 (LEFT)) (#:G113 (RIGHT)))\n            (UNLESS (EQUAL #:G112 #:G113) (WARN \"diff\")))\n\n--- stderr ---"
+}

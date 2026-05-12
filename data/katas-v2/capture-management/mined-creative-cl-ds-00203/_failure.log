@@ -1,0 +1,8 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (- A B)))
+            (COND ((PLUSP #:G1) :POSITIVE) ((ZEROP #:G1) :EQUAL) (T :NEGATIVE)))
+ACTUAL:   (LET ((#:G112 (- A B)))
+            (COND ((PLUSP #:G112) :POSITIVE) ((ZEROP #:G112) :EQUAL)
+                  (T :NEGATIVE)))
+
+--- stderr ---

@@ -1,0 +1,13 @@
+{
+  "idx": 307,
+  "instruction": "Write a Common Lisp macro `with-timing` that executes body, prints the labeled elapsed wall-clock time to *trace-output*, and returns the value of the body. Use gensym to avoid variable capture.",
+  "reference_defmacro": "(defmacro with-timing (label &body body)\n  (let ((start (gensym)) (result (gensym)))\n    `(let ((,start (get-internal-real-time)))\n       (let ((,result (progn ,@body)))\n         (format *trace-output* \"~&[~A] ~,3F seconds~%\"\n                 ,label\n                 (float (/ (- (get-internal-real-time) ,start)\n                           internal-time-units-per-second)))\n         ,result))))",
+  "category": "debugging",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00307",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (GET-INTERNAL-REAL-TIME)))\n            (LET ((#:G2 (PROGN (FOO) (BAR))))\n              (FORMAT *TRACE-OUTPUT* \"~&[~A] ~,3F seconds~%\" \"task\"\n                      (FLOAT\n                       (/ (- (GET-INTERNAL-REAL-TIME) #:G1)\n                          INTERNAL-TIME-UNITS-PER-SECOND)))\n              #:G2))\nACTUAL:   (LET ((#:G112 (GET-INTERNAL-REAL-TIME)))\n            (LET ((#:G113 (PROGN (FOO) (BAR))))\n              (FORMAT *TRACE-OUTPUT* \"~&[~A] ~,3F seconds~%\" \"task\"\n                      (FLOAT\n                       (/ (- (GET-INTERNAL-REAL-TIME) #:G112)\n"
+}

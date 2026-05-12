@@ -1,0 +1,13 @@
+{
+  "idx": 467,
+  "instruction": "Write a Common Lisp macro `assert-with-context` that asserts an expression is non-nil and, on failure, signals an error that includes the failing form plus a user-supplied context string.",
+  "reference_defmacro": "(defmacro assert-with-context (expr context)\n  (let ((g (gensym)))\n    `(let ((,g ,expr))\n       (unless ,g\n         (error \"Assertion failed: ~S~%Context: ~A\" ',expr ,context))\n       ,g)))",
+  "category": "debugging",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00467",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (NUMBERP X)))\n            (UNLESS #:G1\n              (ERROR \"Assertion failed: ~S~%Context: ~A\" '(NUMBERP X)\n                     \"x must be a number\"))\n            #:G1)\nACTUAL:   (LET ((#:G112 (NUMBERP X)))\n            (UNLESS #:G112\n              (ERROR \"Assertion failed: ~S~%Context: ~A\" '(NUMBERP X)\n                     \"x must be a number\"))\n            #:G112)\n\n--- stderr ---"
+}

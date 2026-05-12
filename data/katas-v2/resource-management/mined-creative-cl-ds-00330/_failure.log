@@ -1,0 +1,9 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 *CONFIG*))
+            (UNWIND-PROTECT (PROGN (SETF *CONFIG* :NEW) (RUN))
+              (SETF *CONFIG* #:G1)))
+ACTUAL:   (LET ((#:G112 *CONFIG*))
+            (UNWIND-PROTECT (PROGN (SETF *CONFIG* :NEW) (RUN))
+              (SETF *CONFIG* #:G112)))
+
+--- stderr ---

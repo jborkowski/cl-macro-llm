@@ -1,0 +1,13 @@
+{
+  "idx": 288,
+  "instruction": "Write a Common Lisp macro `bench-once` that runs an expression a single time and returns two values: the expression's value and the elapsed real-time tick count. Use gensyms for the start time, the value, and the end time so the bench machinery is invisible to the wrapped expression.",
+  "reference_defmacro": "(defmacro bench-once (expr)\n  (let ((start (gensym)) (val (gensym)) (end (gensym)))\n    `(let* ((,start (get-internal-real-time))\n            (,val ,expr)\n            (,end (get-internal-real-time)))\n       (values ,val (- ,end ,start)))))",
+  "category": "capture-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00288",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET* ((#:G1 (GET-INTERNAL-REAL-TIME))\n                 (#:G2 (COMPUTE))\n                 (#:G3 (GET-INTERNAL-REAL-TIME)))\n            (VALUES #:G2 (- #:G3 #:G1)))\nACTUAL:   (LET* ((#:G112 (GET-INTERNAL-REAL-TIME))\n                 (#:G113 (COMPUTE))\n                 (#:G114 (GET-INTERNAL-REAL-TIME)))\n            (VALUES #:G113 (- #:G114 #:G112)))\n\n--- stderr ---"
+}

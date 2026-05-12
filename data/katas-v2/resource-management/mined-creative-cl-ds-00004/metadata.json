@@ -1,0 +1,13 @@
+{
+  "idx": 4,
+  "instruction": "Write a Common Lisp macro `with-rollback` that snapshots the value of a place, runs the body, and if the body exits non-locally (error or throw) restores the place to its snapshotted value. On normal completion, leave the place alone and return the body's values.",
+  "reference_defmacro": "(defmacro with-rollback (place &body body)\n  (let ((saved (gensym)) (ok (gensym)))\n    `(let ((,saved ,place) (,ok nil))\n       (unwind-protect\n            (multiple-value-prog1 (progn ,@body) (setf ,ok t))\n         (unless ,ok (setf ,place ,saved))))))",
+  "category": "resource-management",
+  "technique": "gensym",
+  "complexity": "advanced",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00004",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 *CONFIG*) (#:G2 NIL))\n            (UNWIND-PROTECT\n                (MULTIPLE-VALUE-PROG1 (PROGN (MODIFY *CONFIG*)) (SETF #:G2 T))\n              (UNLESS #:G2 (SETF *CONFIG* #:G1))))\nACTUAL:   (LET ((#:G112 *CONFIG*) (#:G113 NIL))\n            (UNWIND-PROTECT\n                (MULTIPLE-VALUE-PROG1 (PROGN (MODIFY *CONFIG*))\n                  (SETF #:G113 T))\n              (UNLESS #:G113 (SETF *CONFIG* #:G112))))\n\n--- stderr ---"
+}

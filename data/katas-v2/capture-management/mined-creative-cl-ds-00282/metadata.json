@@ -1,0 +1,13 @@
+{
+  "idx": 282,
+  "instruction": "Write a Common Lisp macro `square` that returns the square of its argument. Use once-only via a gensym binding so the argument is evaluated exactly once even though it appears twice in the body.",
+  "reference_defmacro": "(defmacro square (x)\n  (let ((g (gensym)))\n    `(let ((,g ,x))\n       (* ,g ,g))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00282",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (+ 1 2)))\n            (* #:G1 #:G1))\nACTUAL:   (LET ((#:G112 (+ 1 2)))\n            (* #:G112 #:G112))\n\n--- stderr ---"
+}

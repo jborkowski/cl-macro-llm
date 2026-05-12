@@ -1,0 +1,9 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (+ 1 2)))
+            (FORMAT *TRACE-OUTPUT* "~&[~A] ~S~%" "result" #:G1)
+            #:G1)
+ACTUAL:   (LET ((#:G112 (+ 1 2)))
+            (FORMAT *TRACE-OUTPUT* "~&[~A] ~S~%" "result" #:G112)
+            #:G112)
+
+--- stderr ---

@@ -1,0 +1,13 @@
+{
+  "idx": 119,
+  "instruction": "Write a Common Lisp macro `with-saved-stream-position` that records a stream's file position before running body and seeks back to that position on exit, regardless of how the body exits. Use gensyms to avoid double-evaluating the stream form.",
+  "reference_defmacro": "(defmacro with-saved-stream-position (stream &body body)\n  (let ((g-stream (gensym)) (g-pos (gensym)))\n    `(let* ((,g-stream ,stream)\n            (,g-pos (file-position ,g-stream)))\n       (unwind-protect (progn ,@body)\n         (file-position ,g-stream ,g-pos)))))",
+  "category": "resource-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00119",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET* ((#:G1 S) (#:G2 (FILE-POSITION #:G1)))\n            (UNWIND-PROTECT (PROGN (READ-LINE S)) (FILE-POSITION #:G1 #:G2)))\nACTUAL:   (LET* ((#:G112 S) (#:G113 (FILE-POSITION #:G112)))\n            (UNWIND-PROTECT (PROGN (READ-LINE S))\n              (FILE-POSITION #:G112 #:G113)))\n\n--- stderr ---"
+}

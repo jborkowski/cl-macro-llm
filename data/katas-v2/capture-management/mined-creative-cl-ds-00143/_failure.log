@@ -1,0 +1,11 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 LST))
+            (LOOP WHILE #:G1
+                  DO (LET ((K (POP #:G1)) (V (POP #:G1)))
+                       (PRINT (CONS K V)))))
+ACTUAL:   (LET ((#:G112 LST))
+            (LOOP WHILE #:G112
+                  DO (LET ((K (POP #:G112)) (V (POP #:G112)))
+                       (PRINT (CONS K V)))))
+
+--- stderr ---

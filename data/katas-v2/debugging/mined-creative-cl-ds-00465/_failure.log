@@ -1,0 +1,13 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 0))
+            (FLET ((TICK ()
+                     (INCF #:G1)))
+              (DOTIMES (I 5) (TICK)))
+            (FORMAT *TRACE-OUTPUT* "~&~A called ~D times~%" 'TICK #:G1))
+ACTUAL:   (LET ((#:G112 0))
+            (FLET ((TICK ()
+                     (INCF #:G112)))
+              (DOTIMES (I 5) (TICK)))
+            (FORMAT *TRACE-OUTPUT* "~&~A called ~D times~%" 'TICK #:G112))
+
+--- stderr ---

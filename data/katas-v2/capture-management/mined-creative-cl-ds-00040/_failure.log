@@ -1,0 +1,11 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 X) (#:G2 Y))
+            (IF (< #:G1 #:G2)
+                #:G1
+                #:G2))
+ACTUAL:   (LET ((#:G112 X) (#:G113 Y))
+            (IF (< #:G112 #:G113)
+                #:G112
+                #:G113))
+
+--- stderr ---

@@ -1,0 +1,13 @@
+{
+  "idx": 287,
+  "instruction": "Write a Common Lisp macro `if-positive` that evaluates a numeric expression; if positive, runs the then-form, else runs the else-form. The expression must be evaluated exactly once via a gensym binding.",
+  "reference_defmacro": "(defmacro if-positive (expr then &optional else)\n  (let ((g (gensym)))\n    `(let ((,g ,expr))\n       (if (plusp ,g) ,then ,else))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00287",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (BALANCE)))\n            (IF (PLUSP #:G1)\n                :OK\n                :OVERDRAWN))\nACTUAL:   (LET ((#:G112 (BALANCE)))\n            (IF (PLUSP #:G112)\n                :OK\n                :OVERDRAWN))\n\n--- stderr ---"
+}

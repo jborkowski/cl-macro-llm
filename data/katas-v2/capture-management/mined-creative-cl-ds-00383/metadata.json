@@ -1,0 +1,13 @@
+{
+  "idx": 383,
+  "instruction": "Write a Common Lisp macro `mod-into-range` that maps a value into the half-open interval [lo, hi) by computing lo + (val - lo) mod (hi - lo). All three arguments must be evaluated exactly once; lo and hi are each referenced more than once in the expansion.",
+  "reference_defmacro": "(defmacro mod-into-range (val lo hi)\n  (let ((v (gensym)) (l (gensym)) (h (gensym)))\n    `(let* ((,v ,val) (,l ,lo) (,h ,hi))\n       (+ ,l (mod (- ,v ,l) (- ,h ,l))))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00383",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET* ((#:G1 (READ-VAL)) (#:G2 0) (#:G3 100))\n            (+ #:G2 (MOD (- #:G1 #:G2) (- #:G3 #:G2))))\nACTUAL:   (LET* ((#:G112 (READ-VAL)) (#:G113 0) (#:G114 100))\n            (+ #:G113 (MOD (- #:G112 #:G113) (- #:G114 #:G113))))\n\n--- stderr ---"
+}

@@ -1,0 +1,9 @@
+MISMATCH
+EXPECTED: (LET* ((#:G1 #P"/tmp/work/") (D #:G1))
+            (ENSURE-DIRECTORIES-EXIST #:G1)
+            (UNWIND-PROTECT (PROGN (PROCESS D)) (DELETE-DIRECTORY #:G1)))
+ACTUAL:   (LET* ((#:G112 #P"/tmp/work/") (D #:G112))
+            (ENSURE-DIRECTORIES-EXIST #:G112)
+            (UNWIND-PROTECT (PROGN (PROCESS D)) (DELETE-DIRECTORY #:G112)))
+
+--- stderr ---

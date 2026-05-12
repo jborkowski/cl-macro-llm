@@ -1,0 +1,11 @@
+MISMATCH
+EXPECTED: (LET* ((#:G1 (GET-INTERNAL-REAL-TIME))
+                 (#:G2 (COMPUTE))
+                 (#:G3 (GET-INTERNAL-REAL-TIME)))
+            (VALUES #:G2 (- #:G3 #:G1)))
+ACTUAL:   (LET* ((#:G112 (GET-INTERNAL-REAL-TIME))
+                 (#:G113 (COMPUTE))
+                 (#:G114 (GET-INTERNAL-REAL-TIME)))
+            (VALUES #:G113 (- #:G114 #:G112)))
+
+--- stderr ---

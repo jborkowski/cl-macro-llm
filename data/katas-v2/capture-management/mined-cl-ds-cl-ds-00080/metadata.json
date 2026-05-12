@@ -1,0 +1,13 @@
+{
+  "idx": 80,
+  "instruction": "Write a Common Lisp macro to handle this code pattern:\n(is-print (princ \"ABCDEFGH\") \"ABCDEFGHIJKLMNO\")\n\nProblem: Macro call that should be transformed by is-print",
+  "reference_defmacro": "(defmacro is-print (got expected &optional desc)\n  (with-gensyms (output duration duration-inner)\n    (once-only (expected desc)\n      `(with-catching-errors (:description ,desc :expected ,expected)\n         (let* (,duration\n                (,output (with-output-to-string (*standard-output*)\n                           (with-duration ((,duration-inner ,output) ,got)\n                             (declare (ignore ,output))\n                             (setq ,duration ,duration-inner)))))\n           (test ,output ,expected ,desc\n                 :duration ,duration\n                 :got-form ',got\n                 :test-fn #'string=\n                 :report-expected-label \"output\"))))))",
+  "category": "capture-management",
+  "technique": "once-only,gensym",
+  "complexity": "intermediate",
+  "quality_score": 0.875,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/cl-ds/_rejected/cl-ds-00080",
+  "original_failure_log_excerpt": "ERROR: The variable DURATION is unbound.\n\n--- stderr ---\n\n; file: /tmp/tmpn0enj31g.lisp\n; in: DEFMACRO IS-PRINT\n;     `(WITH-CATCHING-ERRORS (:DESCRIPTION ,DESC :EXPECTED ,EXPECTED)\n;       (LET* (,DURATION (,OUTPUT (WITH-OUTPUT-TO-STRING # #)))\n;         (TEST ,OUTPUT ,EXPECTED ,DESC :DURATION ,DURATION :GOT-FORM ',GOT\n;          :TEST-FN #'STRING= :REPORT-EXPECTED-LABEL \"output\")))\n; --> SB-IMPL::|List| \n; ==>\n;   (SB-IMPL::|List| DURATION\n;                    (SB-IMPL::|List| OUTPUT\n;                                     (SB-IMPL::|List| 'WITH-OUTPUT-TO-STRING\n;                              "
+}

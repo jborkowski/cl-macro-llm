@@ -1,0 +1,7 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (COMPUTE)) (#:G2 3))
+            (ZEROP (MOD #:G1 #:G2)))
+ACTUAL:   (LET ((#:G112 (COMPUTE)) (#:G113 3))
+            (ZEROP (MOD #:G112 #:G113)))
+
+--- stderr ---

@@ -1,0 +1,13 @@
+{
+  "idx": 140,
+  "instruction": "Write a Common Lisp macro `with-collector` that hides list head and tail pointers and exposes a user-named local function that appends items in O(1). The form returns the collected list.",
+  "reference_defmacro": "(defmacro with-collector ((name) &body body)\n  (let ((head (gensym)) (tail (gensym)) (item (gensym)) (cell (gensym)))\n    `(let ((,head nil) (,tail nil))\n       (flet ((,name (,item)\n                (let ((,cell (cons ,item nil)))\n                  (if ,head\n                      (setf (cdr ,tail) ,cell ,tail ,cell)\n                      (setf ,head ,cell ,tail ,cell)))))\n         ,@body\n         ,head))))",
+  "category": "capture-management",
+  "technique": "closure-capture",
+  "complexity": "advanced",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00140",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 NIL) (#:G2 NIL))\n            (FLET ((COLLECT (#:G3)\n                     (LET ((#:G4 (CONS #:G3 NIL)))\n                       (IF #:G1\n                           (SETF (CDR #:G2) #:G4\n                                 #:G2 #:G4)\n                           (SETF #:G1 #:G4\n                                 #:G2 #:G4)))))\n              (COLLECT 1)\n              (COLLECT 2)\n              #:G1))\nACTUAL:   (LET ((#:G112 NIL) (#:G113 NIL))\n            (FLET ((COLLECT (#:G114)\n                     (LET ((#:G115 (CONS #:G114 NIL)))\n                       (IF #:G112\n        "
+}

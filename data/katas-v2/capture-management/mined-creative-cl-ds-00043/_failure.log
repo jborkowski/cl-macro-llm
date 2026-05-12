@@ -1,0 +1,11 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 COUNT))
+            (IF (ZEROP #:G1)
+                0
+                (/ TOTAL #:G1)))
+ACTUAL:   (LET ((#:G112 COUNT))
+            (IF (ZEROP #:G112)
+                0
+                (/ TOTAL #:G112)))
+
+--- stderr ---

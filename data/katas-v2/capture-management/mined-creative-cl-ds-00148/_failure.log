@@ -1,0 +1,13 @@
+MISMATCH
+EXPECTED: (BLOCK #:G1
+            (FLET ((BAIL (&OPTIONAL #:G2)
+                     (RETURN-FROM #:G1 #:G2)))
+              (WHEN (BAD?) (BAIL :ERR))
+              (COMPUTE)))
+ACTUAL:   (BLOCK #:G112
+            (FLET ((BAIL (&OPTIONAL #:G113)
+                     (RETURN-FROM #:G112 #:G113)))
+              (WHEN (BAD?) (BAIL :ERR))
+              (COMPUTE)))
+
+--- stderr ---

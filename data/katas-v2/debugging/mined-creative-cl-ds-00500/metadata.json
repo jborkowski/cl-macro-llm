@@ -1,0 +1,13 @@
+{
+  "idx": 500,
+  "instruction": "Write a Common Lisp macro `spy` that wraps an expression, prints the source form and its evaluated result to standard output, then returns the result. Useful for debugging without modifying surrounding code.",
+  "reference_defmacro": "(defmacro spy (form)\n  (let ((v (gensym)))\n    `(let ((,v ,form))\n       (format t \"~&SPY ~S => ~S~%\" ',form ,v)\n       ,v)))",
+  "category": "debugging",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00500",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (+ 1 2)))\n            (FORMAT T \"~&SPY ~S => ~S~%\" '(+ 1 2) #:G1)\n            #:G1)\nACTUAL:   (LET ((#:G112 (+ 1 2)))\n            (FORMAT T \"~&SPY ~S => ~S~%\" '(+ 1 2) #:G112)\n            #:G112)\n\n--- stderr ---"
+}

@@ -1,0 +1,25 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 NIL) (#:G2 NIL))
+            (FLET ((COLLECT (#:G3)
+                     (LET ((#:G4 (CONS #:G3 NIL)))
+                       (IF #:G1
+                           (SETF (CDR #:G2) #:G4
+                                 #:G2 #:G4)
+                           (SETF #:G1 #:G4
+                                 #:G2 #:G4)))))
+              (COLLECT 1)
+              (COLLECT 2)
+              #:G1))
+ACTUAL:   (LET ((#:G112 NIL) (#:G113 NIL))
+            (FLET ((COLLECT (#:G114)
+                     (LET ((#:G115 (CONS #:G114 NIL)))
+                       (IF #:G112
+                           (SETF (CDR #:G113) #:G115
+                                 #:G113 #:G115)
+                           (SETF #:G112 #:G115
+                                 #:G113 #:G115)))))
+              (COLLECT 1)
+              (COLLECT 2)
+              #:G112))
+
+--- stderr ---

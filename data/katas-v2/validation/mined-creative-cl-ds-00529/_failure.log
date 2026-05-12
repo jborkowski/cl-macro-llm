@@ -1,0 +1,10 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (COMPUTE-VALUE)))
+            (UNLESS (PLUSP #:G1) (ERROR "~S failed predicate ~S" #:G1 'PLUSP))
+            #:G1)
+ACTUAL:   (LET ((#:G112 (COMPUTE-VALUE)))
+            (UNLESS (PLUSP #:G112)
+              (ERROR "~S failed predicate ~S" #:G112 'PLUSP))
+            #:G112)
+
+--- stderr ---

@@ -1,0 +1,13 @@
+{
+  "idx": 367,
+  "instruction": "Write a Common Lisp macro `with-deadline-check` that runs the body and emits a warning if execution exceeded the given number of seconds. Use gensyms for the start time and limit so user code cannot shadow them. Returns the body's values.",
+  "reference_defmacro": "(defmacro with-deadline-check (seconds &body body)\n  (let ((start (gensym)) (limit (gensym)))\n    `(let* ((,start (get-internal-real-time))\n            (,limit (* ,seconds internal-time-units-per-second)))\n       (multiple-value-prog1 (progn ,@body)\n         (when (> (- (get-internal-real-time) ,start) ,limit)\n           (warn \"Deadline exceeded\"))))))",
+  "category": "resource-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00367",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET* ((#:G1 (GET-INTERNAL-REAL-TIME))\n                 (#:G2 (* 5 INTERNAL-TIME-UNITS-PER-SECOND)))\n            (MULTIPLE-VALUE-PROG1 (PROGN (LONG-COMPUTATION))\n              (WHEN (> (- (GET-INTERNAL-REAL-TIME) #:G1) #:G2)\n                (WARN \"Deadline exceeded\"))))\nACTUAL:   (LET* ((#:G112 (GET-INTERNAL-REAL-TIME))\n                 (#:G113 (* 5 INTERNAL-TIME-UNITS-PER-SECOND)))\n            (MULTIPLE-VALUE-PROG1 (PROGN (LONG-COMPUTATION))\n              (WHEN (> (- (GET-INTERNAL-REAL-TIME) #:G112) #:G113)\n                (WARN \"Deadline exceeded\"))))\n\n--- stderr ---"
+}

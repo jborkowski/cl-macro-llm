@@ -1,0 +1,13 @@
+{
+  "idx": 139,
+  "instruction": "Write a Common Lisp macro `with-temp-binding` that saves a place to a hidden gensym, sets it to a new value, runs body, and restores the original value on exit (including non-local exits).",
+  "reference_defmacro": "(defmacro with-temp-binding ((place value) &body body)\n  (let ((saved (gensym)))\n    `(let ((,saved ,place))\n       (unwind-protect\n            (progn (setf ,place ,value) ,@body)\n         (setf ,place ,saved)))))",
+  "category": "capture-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00139",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 *X*))\n            (UNWIND-PROTECT (PROGN (SETF *X* 10) (DO-STUFF)) (SETF *X* #:G1)))\nACTUAL:   (LET ((#:G112 *X*))\n            (UNWIND-PROTECT (PROGN (SETF *X* 10) (DO-STUFF)) (SETF *X* #:G112)))\n\n--- stderr ---"
+}

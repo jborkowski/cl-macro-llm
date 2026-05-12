@@ -1,0 +1,13 @@
+{
+  "idx": 479,
+  "instruction": "Write a Common Lisp macro `tee` that evaluates an expression once and feeds the value to two functions, returning both results as multiple values.",
+  "reference_defmacro": "(defmacro tee (expr f1 f2)\n  (let ((v (gensym)))\n    `(let ((,v ,expr))\n       (values (funcall ,f1 ,v) (funcall ,f2 ,v)))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00479",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (COMPUTE)))\n            (VALUES (FUNCALL #'PRINT #:G1) (FUNCALL #'LOG #:G1)))\nACTUAL:   (LET ((#:G112 (COMPUTE)))\n            (VALUES (FUNCALL #'PRINT #:G112) (FUNCALL #'LOG #:G112)))\n\n--- stderr ---"
+}

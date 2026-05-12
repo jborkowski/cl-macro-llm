@@ -1,0 +1,9 @@
+MISMATCH
+EXPECTED: (LET* ((#:G1 "/tmp/foo.txt") (F #:G1))
+            (UNWIND-PROTECT (PROGN (WRITE-STUFF F))
+              (WHEN (PROBE-FILE #:G1) (DELETE-FILE #:G1))))
+ACTUAL:   (LET* ((#:G112 "/tmp/foo.txt") (F #:G112))
+            (UNWIND-PROTECT (PROGN (WRITE-STUFF F))
+              (WHEN (PROBE-FILE #:G112) (DELETE-FILE #:G112))))
+
+--- stderr ---

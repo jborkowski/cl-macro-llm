@@ -1,0 +1,11 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 3) (#:G2 AMOUNT))
+            (UNLESS (ZEROP (MOD #:G2 #:G1))
+              (ERROR "~S does not divide ~S" #:G1 #:G2))
+            #:G2)
+ACTUAL:   (LET ((#:G112 3) (#:G113 AMOUNT))
+            (UNLESS (ZEROP (MOD #:G113 #:G112))
+              (ERROR "~S does not divide ~S" #:G112 #:G113))
+            #:G113)
+
+--- stderr ---

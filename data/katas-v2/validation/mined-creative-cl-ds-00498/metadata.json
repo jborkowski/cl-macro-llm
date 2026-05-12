@@ -1,0 +1,13 @@
+{
+  "idx": 498,
+  "instruction": "Write a Common Lisp macro `assert-instance` that evaluates a value once, signals an error unless it is TYPEP of the named class/type, and otherwise returns the value.",
+  "reference_defmacro": "(defmacro assert-instance (value class)\n  (let ((v (gensym)))\n    `(let ((,v ,value))\n       (unless (typep ,v ',class)\n         (error \"~A is not an instance of ~A\" ,v ',class))\n       ,v)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00498",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 OBJ))\n            (UNLESS (TYPEP #:G1 'ACCOUNT)\n              (ERROR \"~A is not an instance of ~A\" #:G1 'ACCOUNT))\n            #:G1)\nACTUAL:   (LET ((#:G112 OBJ))\n            (UNLESS (TYPEP #:G112 'ACCOUNT)\n              (ERROR \"~A is not an instance of ~A\" #:G112 'ACCOUNT))\n            #:G112)\n\n--- stderr ---"
+}

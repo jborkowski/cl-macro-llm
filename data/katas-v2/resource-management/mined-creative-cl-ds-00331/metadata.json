@@ -1,0 +1,13 @@
+{
+  "idx": 331,
+  "instruction": "Write a Common Lisp macro `with-database-transaction` that calls `begin-transaction` on a connection, runs body, and commits via `commit-transaction` only if body returned normally; otherwise calls `rollback-transaction`. Use gensyms for the connection and the success flag.",
+  "reference_defmacro": "(defmacro with-database-transaction ((conn) &body body)\n  (let ((c (gensym)) (ok (gensym)))\n    `(let ((,c ,conn) (,ok nil))\n       (begin-transaction ,c)\n       (unwind-protect\n            (multiple-value-prog1 (progn ,@body)\n              (setf ,ok t))\n         (if ,ok (commit-transaction ,c) (rollback-transaction ,c))))))",
+  "category": "resource-management",
+  "technique": "gensym",
+  "complexity": "advanced",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00331",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 DB) (#:G2 NIL))\n            (BEGIN-TRANSACTION #:G1)\n            (UNWIND-PROTECT\n                (MULTIPLE-VALUE-PROG1 (PROGN (INSERT DB ROW)) (SETF #:G2 T))\n              (IF #:G2\n                  (COMMIT-TRANSACTION #:G1)\n                  (ROLLBACK-TRANSACTION #:G1))))\nACTUAL:   (LET ((#:G112 DB) (#:G113 NIL))\n            (BEGIN-TRANSACTION #:G112)\n            (UNWIND-PROTECT\n                (MULTIPLE-VALUE-PROG1 (PROGN (INSERT DB ROW)) (SETF #:G113 T))\n              (IF #:G113\n                  (COMMIT-TRANSACTION #:G112)\n                  (ROLLBACK-TRANSACT"
+}

@@ -1,0 +1,9 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 ITEMS))
+            (WHEN (ZEROP (LENGTH #:G1)) (ERROR "Sequence is empty"))
+            #:G1)
+ACTUAL:   (LET ((#:G112 ITEMS))
+            (WHEN (ZEROP (LENGTH #:G112)) (ERROR "Sequence is empty"))
+            #:G112)
+
+--- stderr ---

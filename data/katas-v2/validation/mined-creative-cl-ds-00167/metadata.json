@@ -1,0 +1,13 @@
+{
+  "idx": 167,
+  "instruction": "Write a Common Lisp macro `check-keys` that takes a property-list expression and a list of required keyword keys; the plist is evaluated once and an error is signaled if any required key's GETF lookup is nil. Returns the plist on success.",
+  "reference_defmacro": "(defmacro check-keys (plist &rest required-keys)\n  (let ((g (gensym)))\n    `(let ((,g ,plist))\n       ,@(mapcar (lambda (k) `(unless (getf ,g ,k) (error \"Missing required key: ~S\" ,k))) required-keys)\n       ,g)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00167",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 OPTIONS))\n            (UNLESS (GETF #:G1 :NAME) (ERROR \"Missing required key: ~S\" :NAME))\n            (UNLESS (GETF #:G1 :TYPE) (ERROR \"Missing required key: ~S\" :TYPE))\n            #:G1)\nACTUAL:   (LET ((#:G112 OPTIONS))\n            (UNLESS (GETF #:G112 :NAME)\n              (ERROR \"Missing required key: ~S\" :NAME))\n            (UNLESS (GETF #:G112 :TYPE)\n              (ERROR \"Missing required key: ~S\" :TYPE))\n            #:G112)\n\n--- stderr ---"
+}

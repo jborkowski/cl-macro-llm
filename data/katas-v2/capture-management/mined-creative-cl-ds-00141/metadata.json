@@ -1,0 +1,13 @@
+{
+  "idx": 141,
+  "instruction": "Write a Common Lisp macro `with-saved-vars` that saves the current values of a list of variables into hidden gensyms, runs body, and restores them on exit, even if a non-local control transfer occurs.",
+  "reference_defmacro": "(defmacro with-saved-vars (vars &body body)\n  (let ((saves (loop for v in vars collect (gensym))))\n    `(let ,(mapcar #'list saves vars)\n       (unwind-protect (progn ,@body)\n         ,@(mapcar (lambda (v s) `(setf ,v ,s)) vars saves)))))",
+  "category": "capture-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00141",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 *A*) (#:G2 *B*))\n            (UNWIND-PROTECT (PROGN (MUTATE)) (SETF *A* #:G1) (SETF *B* #:G2)))\nACTUAL:   (LET ((#:G112 *A*) (#:G113 *B*))\n            (UNWIND-PROTECT (PROGN (MUTATE))\n              (SETF *A* #:G112)\n              (SETF *B* #:G113)))\n\n--- stderr ---"
+}

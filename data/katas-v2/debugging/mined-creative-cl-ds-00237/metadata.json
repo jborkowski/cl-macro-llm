@@ -1,0 +1,13 @@
+{
+  "idx": 237,
+  "instruction": "Write a Common Lisp macro `inline-test` that compares an expected value against an actual expression with EQUAL and prints PASS or FAIL with diagnostic detail to *trace-output*. Each side is evaluated exactly once.",
+  "reference_defmacro": "(defmacro inline-test (name expected actual)\n  (let ((e (gensym)) (a (gensym)))\n    `(let ((,e ,expected) (,a ,actual))\n       (if (equal ,e ,a)\n           (format *trace-output* \"~&PASS ~A~%\" ,name)\n           (format *trace-output* \"~&FAIL ~A: expected ~S got ~S~%\" ,name ,e ,a)))))",
+  "category": "debugging",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00237",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 3) (#:G2 (+ 1 2)))\n            (IF (EQUAL #:G1 #:G2)\n                (FORMAT *TRACE-OUTPUT* \"~&PASS ~A~%\" \"addition\")\n                (FORMAT *TRACE-OUTPUT* \"~&FAIL ~A: expected ~S got ~S~%\"\n                        \"addition\" #:G1 #:G2)))\nACTUAL:   (LET ((#:G112 3) (#:G113 (+ 1 2)))\n            (IF (EQUAL #:G112 #:G113)\n                (FORMAT *TRACE-OUTPUT* \"~&PASS ~A~%\" \"addition\")\n                (FORMAT *TRACE-OUTPUT* \"~&FAIL ~A: expected ~S got ~S~%\"\n                        \"addition\" #:G112 #:G113)))\n\n--- stderr ---"
+}

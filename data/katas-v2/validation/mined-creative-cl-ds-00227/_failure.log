@@ -1,0 +1,13 @@
+MISMATCH
+EXPECTED: (PROGN
+           (ASSERT (>= BALANCE 0))
+           (LET ((#:G1 (PROGN (DEPOSIT 100))))
+             (ASSERT (>= BALANCE 0))
+             #:G1))
+ACTUAL:   (PROGN
+           (ASSERT (>= BALANCE 0))
+           (LET ((#:G112 (PROGN (DEPOSIT 100))))
+             (ASSERT (>= BALANCE 0))
+             #:G112))
+
+--- stderr ---

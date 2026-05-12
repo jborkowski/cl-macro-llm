@@ -1,0 +1,7 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 10))
+            (DO ((I 0 (1+ I))) ((> I #:G1)) (PRINT I)))
+ACTUAL:   (LET ((#:G112 10))
+            (DO ((I 0 (1+ I))) ((> I #:G112)) (PRINT I)))
+
+--- stderr ---

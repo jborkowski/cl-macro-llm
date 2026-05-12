@@ -1,0 +1,13 @@
+{
+  "idx": 206,
+  "instruction": "Write a Common Lisp macro `with-locked` that acquires a lock expression (evaluating it only once), runs body inside unwind-protect, and releases the lock even on non-local exit.",
+  "reference_defmacro": "(defmacro with-locked ((lock) &body body)\n  (let ((g (gensym)))\n    `(let ((,g ,lock))\n       (acquire-lock ,g)\n       (unwind-protect\n            (progn ,@body)\n         (release-lock ,g)))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00206",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 MY-LOCK))\n            (ACQUIRE-LOCK #:G1)\n            (UNWIND-PROTECT (PROGN (WORK)) (RELEASE-LOCK #:G1)))\nACTUAL:   (LET ((#:G112 MY-LOCK))\n            (ACQUIRE-LOCK #:G112)\n            (UNWIND-PROTECT (PROGN (WORK)) (RELEASE-LOCK #:G112)))\n\n--- stderr ---"
+}

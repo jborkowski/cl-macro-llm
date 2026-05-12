@@ -1,0 +1,9 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (FIND-USER ID)))
+            (WHEN (NULL #:G1) (ERROR "Expected non-nil value"))
+            #:G1)
+ACTUAL:   (LET ((#:G112 (FIND-USER ID)))
+            (WHEN (NULL #:G112) (ERROR "Expected non-nil value"))
+            #:G112)
+
+--- stderr ---

@@ -1,0 +1,13 @@
+{
+  "idx": 46,
+  "instruction": "Write a Common Lisp macro `for-i-from-to` that iterates a user-named variable from start through end inclusive. The end expression must be evaluated only once and stashed in a hidden binding that the body cannot shadow.",
+  "reference_defmacro": "(defmacro for-i-from-to (var start end &body body)\n  (let ((g-end (gensym)))\n    `(let ((,g-end ,end))\n       (do ((,var ,start (1+ ,var)))\n           ((> ,var ,g-end))\n         ,@body))))",
+  "category": "capture-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00046",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 10))\n            (DO ((I 0 (1+ I))) ((> I #:G1)) (PRINT I)))\nACTUAL:   (LET ((#:G112 10))\n            (DO ((I 0 (1+ I))) ((> I #:G112)) (PRINT I)))\n\n--- stderr ---"
+}

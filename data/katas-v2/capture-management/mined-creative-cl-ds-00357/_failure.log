@@ -1,0 +1,7 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (RANDOM 10)) (#:G2 100))
+            (SETF COUNTER (MIN (+ COUNTER #:G1) #:G2)))
+ACTUAL:   (LET ((#:G112 (RANDOM 10)) (#:G113 100))
+            (SETF COUNTER (MIN (+ COUNTER #:G112) #:G113)))
+
+--- stderr ---

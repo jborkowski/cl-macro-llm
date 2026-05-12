@@ -1,0 +1,22 @@
+ERROR: The function COMMON-LISP-USER::DSYM_ is undefined.
+
+--- stderr ---
+
+; file: /tmp/tmp9xco8_k1.lisp
+; in: DEFMACRO POP-LAST-PREPROCESSOR-DIRECTIVE-TOKEN
+;     `(LET ((,DSYM_ ,DIRECTIVE-NAME))
+;        (PROG1 (POP-PREPROCESSOR-DIRECTIVE-TOKEN ,TOKEN-LIST ,DSYM_)
+;          (CHECK-NO-PREPROCESSOR-TOKEN ,TOKEN-LIST ,DSYM_)))
+; --> SB-IMPL::|List| 
+; ==>
+;   (SB-IMPL::|List| DSYM_ DIRECTIVE-NAME)
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::DSYM_
+; 
+; compilation unit finished
+;   Undefined functions:
+;     DSYM_ WITH-GENSYMS
+;   Undefined variable:
+;     DSYM_
+;   caught 1 WARNING condition

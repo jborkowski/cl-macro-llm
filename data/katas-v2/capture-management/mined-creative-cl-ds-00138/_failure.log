@@ -1,0 +1,7 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 0) (#:G2 100))
+            (SETF X (MAX #:G1 (MIN #:G2 X))))
+ACTUAL:   (LET ((#:G112 0) (#:G113 100))
+            (SETF X (MAX #:G112 (MIN #:G113 X))))
+
+--- stderr ---

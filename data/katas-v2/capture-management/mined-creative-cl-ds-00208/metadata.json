@@ -1,0 +1,13 @@
+{
+  "idx": 208,
+  "instruction": "Write a Common Lisp macro `in-range-p` that returns true iff x is between lo and hi inclusive, evaluating each of the three expressions exactly once via gensym-bound temporaries.",
+  "reference_defmacro": "(defmacro in-range-p (x lo hi)\n  (let ((v (gensym)) (l (gensym)) (h (gensym)))\n    `(let ((,v ,x) (,l ,lo) (,h ,hi))\n       (and (>= ,v ,l) (<= ,v ,h)))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00208",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (COMPUTE)) (#:G2 0) (#:G3 100))\n            (AND (>= #:G1 #:G2) (<= #:G1 #:G3)))\nACTUAL:   (LET ((#:G112 (COMPUTE)) (#:G113 0) (#:G114 100))\n            (AND (>= #:G112 #:G113) (<= #:G112 #:G114)))\n\n--- stderr ---"
+}

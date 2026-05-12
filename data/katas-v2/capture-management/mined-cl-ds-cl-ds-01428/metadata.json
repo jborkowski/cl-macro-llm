@@ -1,0 +1,13 @@
+{
+  "idx": 1428,
+  "instruction": "Write a Common Lisp macro to handle this code pattern:\n(whichever a b c)\n\nProblem: Macro call that should be transformed by whichever",
+  "reference_defmacro": "(defmacro whichever (&rest possibilities &environment env)\n  \"Evaluates exactly one of POSSIBILITIES, chosen at random.\"\n  (setf possibilities (mapcar (lambda (p) (macroexpand p env)) possibilities))\n  (let ((length (length possibilities)))\n    (cond\n      ((= 1 length)\n       (first possibilities))\n      ((every #'constantp possibilities)\n       `(svref (load-time-value (vector ,@possibilities)) \n               (random ,length)))\n      (T\n       (labels ((expand (possibilities position random-number)\n                  (if (null (cdr possibilities))\n                      (car possibilities)\n                      (let* ((length (length possibilities))\n                             (half (truncate length 2))\n                             (second-half (nthcdr half possibilities))\n                             (first-half (butlast possibilities (- length half))))\n                        `(if (< ,random-number ,(+ position half))\n                             ,(expand first-half position random-number)\n                             ,(expand second-half (+ position half) random-number))))))\n         (with-gensyms (random-number)\n           `(let ((,random-number (random ,length)))\n              ,(expand possibilities 0 random-number))))))))",
+  "category": "capture-management",
+  "technique": "gensym",
+  "complexity": "advanced",
+  "quality_score": 0.8724999999999999,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/cl-ds/_rejected/cl-ds-01428",
+  "original_failure_log_excerpt": "ERROR: The function COMMON-LISP-USER::RANDOM-NUMBER is undefined.\n\n--- stderr ---\n\n; file: /tmp/tmpwv0c_g_h.lisp\n; in: DEFMACRO WHICHEVER\n;     (EXPAND POSSIBILITIES 0 RANDOM-NUMBER)\n; \n; caught WARNING:\n;   undefined variable: COMMON-LISP-USER::RANDOM-NUMBER\n\n;     `(LET ((,RANDOM-NUMBER (RANDOM ,LENGTH)))\n;        ,(EXPAND POSSIBILITIES 0 RANDOM-NUMBER))\n; --> SB-IMPL::|List| \n; ==>\n;   (SB-IMPL::|List| RANDOM-NUMBER (SB-IMPL::|List| 'RANDOM LENGTH))\n; \n; caught WARNING:\n;   undefined variable: COMMON-LISP-USER::RANDOM-NUMBER\n; \n; compilation unit finished\n;   Undefined functions:\n;     RAND"
+}

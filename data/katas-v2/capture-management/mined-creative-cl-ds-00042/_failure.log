@@ -1,0 +1,7 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (READ-TEMPERATURE)))
+            (COND ((ZEROP #:G1) 0) ((PLUSP #:G1) 1) (T -1)))
+ACTUAL:   (LET ((#:G112 (READ-TEMPERATURE)))
+            (COND ((ZEROP #:G112) 0) ((PLUSP #:G112) 1) (T -1)))
+
+--- stderr ---

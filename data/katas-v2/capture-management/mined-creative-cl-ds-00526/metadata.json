@@ -1,0 +1,13 @@
+{
+  "idx": 526,
+  "instruction": "Write a Common Lisp macro `make-counter` that expands into a closure starting at an optional initial value (default 0). Each call to the closure increments and returns the next integer. Use a gensym so the internal counter cannot collide with anything outside.",
+  "reference_defmacro": "(defmacro make-counter (&optional (start 0))\n  (let ((c (gensym)))\n    `(let ((,c ,start))\n       (lambda () (incf ,c)))))",
+  "category": "capture-management",
+  "technique": "closure-capture",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00526",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 10))\n            (LAMBDA () (INCF #:G1)))\nACTUAL:   (LET ((#:G112 10))\n            (LAMBDA () (INCF #:G112)))\n\n--- stderr ---"
+}

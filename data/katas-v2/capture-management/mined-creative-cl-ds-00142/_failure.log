@@ -1,0 +1,13 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 X))
+            (IF (NUMBERP #:G1)
+                (LET ((N #:G1))
+                  (+ N 1))
+                :NOPE))
+ACTUAL:   (LET ((#:G112 X))
+            (IF (NUMBERP #:G112)
+                (LET ((N #:G112))
+                  (+ N 1))
+                :NOPE))
+
+--- stderr ---

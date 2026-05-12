@@ -1,0 +1,9 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 *DB*))
+            (UNWIND-PROTECT (PROGN (SETF *DB* :TEST) (RUN-TESTS))
+              (SETF *DB* #:G1)))
+ACTUAL:   (LET ((#:G112 *DB*))
+            (UNWIND-PROTECT (PROGN (SETF *DB* :TEST) (RUN-TESTS))
+              (SETF *DB* #:G112)))
+
+--- stderr ---

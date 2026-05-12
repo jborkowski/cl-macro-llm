@@ -1,0 +1,13 @@
+{
+  "idx": 39,
+  "instruction": "Write a Common Lisp macro `max-of` that returns the larger of two expressions without calling the built-in max. Each subform must be evaluated only once even though the larger one is referenced twice.",
+  "reference_defmacro": "(defmacro max-of (a b)\n  (let ((ga (gensym)) (gb (gensym)))\n    `(let ((,ga ,a) (,gb ,b))\n       (if (> ,ga ,gb) ,ga ,gb))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00039",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (F)) (#:G2 (G)))\n            (IF (> #:G1 #:G2)\n                #:G1\n                #:G2))\nACTUAL:   (LET ((#:G112 (F)) (#:G113 (G)))\n            (IF (> #:G112 #:G113)\n                #:G112\n                #:G113))\n\n--- stderr ---"
+}

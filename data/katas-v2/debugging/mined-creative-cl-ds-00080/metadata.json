@@ -1,0 +1,13 @@
+{
+  "idx": 80,
+  "instruction": "Write a Common Lisp macro `logged-block` that prints an ENTER message before running a body and an EXIT message with the body's return value afterward, then returns that value.",
+  "reference_defmacro": "(defmacro logged-block (label &body body)\n  (let ((result (gensym)))\n    `(progn\n       (format *trace-output* \"~&ENTER ~A~%\" ,label)\n       (let ((,result (progn ,@body)))\n         (format *trace-output* \"~&EXIT ~A => ~S~%\" ,label ,result)\n         ,result))))",
+  "category": "debugging",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00080",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (PROGN\n           (FORMAT *TRACE-OUTPUT* \"~&ENTER ~A~%\" \"main\")\n           (LET ((#:G1 (PROGN (PROCESS))))\n             (FORMAT *TRACE-OUTPUT* \"~&EXIT ~A => ~S~%\" \"main\" #:G1)\n             #:G1))\nACTUAL:   (PROGN\n           (FORMAT *TRACE-OUTPUT* \"~&ENTER ~A~%\" \"main\")\n           (LET ((#:G112 (PROGN (PROCESS))))\n             (FORMAT *TRACE-OUTPUT* \"~&EXIT ~A => ~S~%\" \"main\" #:G112)\n             #:G112))\n\n--- stderr ---"
+}

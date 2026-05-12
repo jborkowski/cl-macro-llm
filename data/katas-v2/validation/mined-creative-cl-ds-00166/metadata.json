@@ -1,0 +1,13 @@
+{
+  "idx": 166,
+  "instruction": "Write a Common Lisp macro `must-be-string` that evaluates an expression once and uses CHECK-TYPE to require the value to be a string, returning the value.",
+  "reference_defmacro": "(defmacro must-be-string (expr)\n  (let ((g (gensym)))\n    `(let ((,g ,expr))\n       (check-type ,g string)\n       ,g)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00166",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (GET-NAME)))\n            (CHECK-TYPE #:G1 STRING)\n            #:G1)\nACTUAL:   (LET ((#:G112 (GET-NAME)))\n            (CHECK-TYPE #:G112 STRING)\n            #:G112)\n\n--- stderr ---"
+}

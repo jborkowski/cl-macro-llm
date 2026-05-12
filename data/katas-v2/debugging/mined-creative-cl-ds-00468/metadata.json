@@ -1,0 +1,13 @@
+{
+  "idx": 468,
+  "instruction": "Write a Common Lisp macro `assert-type` that evaluates an expression once, checks that it satisfies a given type, and signals a descriptive error if not. The type argument is unevaluated. Returns the value on success.",
+  "reference_defmacro": "(defmacro assert-type (expr type)\n  (let ((g (gensym)))\n    `(let ((,g ,expr))\n       (unless (typep ,g ',type)\n         (error \"Type assertion failed: ~S => ~S, not of type ~S\"\n                ',expr ,g ',type))\n       ,g)))",
+  "category": "debugging",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00468",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (READ)))\n            (UNLESS (TYPEP #:G1 'INTEGER)\n              (ERROR \"Type assertion failed: ~S => ~S, not of type ~S\" '(READ)\n                     #:G1 'INTEGER))\n            #:G1)\nACTUAL:   (LET ((#:G112 (READ)))\n            (UNLESS (TYPEP #:G112 'INTEGER)\n              (ERROR \"Type assertion failed: ~S => ~S, not of type ~S\" '(READ)\n                     #:G112 'INTEGER))\n            #:G112)\n\n--- stderr ---"
+}

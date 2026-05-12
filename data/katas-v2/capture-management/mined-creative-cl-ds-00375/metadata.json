@@ -1,0 +1,13 @@
+{
+  "idx": 375,
+  "instruction": "Write a Common Lisp macro `pair-sum-and-product` that takes two expressions, evaluates each exactly once, and returns two values: their sum and their product.",
+  "reference_defmacro": "(defmacro pair-sum-and-product (a b)\n  (let ((av (gensym)) (bv (gensym)))\n    `(let ((,av ,a) (,bv ,b))\n       (values (+ ,av ,bv) (* ,av ,bv)))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00375",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (X)) (#:G2 (Y)))\n            (VALUES (+ #:G1 #:G2) (* #:G1 #:G2)))\nACTUAL:   (LET ((#:G112 (X)) (#:G113 (Y)))\n            (VALUES (+ #:G112 #:G113) (* #:G112 #:G113)))\n\n--- stderr ---"
+}

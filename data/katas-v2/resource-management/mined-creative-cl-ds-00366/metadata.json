@@ -1,0 +1,13 @@
+{
+  "idx": 366,
+  "instruction": "Write a Common Lisp macro `with-restored-place` that captures the current value of a generalized place, runs the body (which may mutate the place), and restores the original value on exit. Use a gensym for the saved value.",
+  "reference_defmacro": "(defmacro with-restored-place (place &body body)\n  (let ((saved (gensym)))\n    `(let ((,saved ,place))\n       (unwind-protect (progn ,@body)\n         (setf ,place ,saved)))))",
+  "category": "resource-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00366",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 *CONFIG*))\n            (UNWIND-PROTECT (PROGN (SETF *CONFIG* :MODIFIED) (RUN))\n              (SETF *CONFIG* #:G1)))\nACTUAL:   (LET ((#:G112 *CONFIG*))\n            (UNWIND-PROTECT (PROGN (SETF *CONFIG* :MODIFIED) (RUN))\n              (SETF *CONFIG* #:G112)))\n\n--- stderr ---"
+}

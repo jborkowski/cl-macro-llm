@@ -1,0 +1,13 @@
+{
+  "idx": 229,
+  "instruction": "Write a Common Lisp macro `ensure-symbol` that signals an error if its argument is not a symbol; otherwise returns the argument. Evaluates the argument once.",
+  "reference_defmacro": "(defmacro ensure-symbol (value)\n  (let ((g (gensym)))\n    `(let ((,g ,value))\n       (unless (symbolp ,g)\n         (error \"Expected a symbol, got ~S\" ,g))\n       ,g)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00229",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 NAME))\n            (UNLESS (SYMBOLP #:G1) (ERROR \"Expected a symbol, got ~S\" #:G1))\n            #:G1)\nACTUAL:   (LET ((#:G112 NAME))\n            (UNLESS (SYMBOLP #:G112)\n              (ERROR \"Expected a symbol, got ~S\" #:G112))\n            #:G112)\n\n--- stderr ---"
+}

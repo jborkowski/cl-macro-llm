@@ -1,0 +1,13 @@
+{
+  "idx": 42,
+  "instruction": "Write a Common Lisp macro `signum-of` that expands to a form returning -1, 0, or 1 according to the sign of its argument. The argument must be evaluated only once even though three predicates inspect it.",
+  "reference_defmacro": "(defmacro signum-of (x)\n  (let ((g (gensym)))\n    `(let ((,g ,x))\n       (cond ((zerop ,g) 0)\n             ((plusp ,g) 1)\n             (t -1)))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00042",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (READ-TEMPERATURE)))\n            (COND ((ZEROP #:G1) 0) ((PLUSP #:G1) 1) (T -1)))\nACTUAL:   (LET ((#:G112 (READ-TEMPERATURE)))\n            (COND ((ZEROP #:G112) 0) ((PLUSP #:G112) 1) (T -1)))\n\n--- stderr ---"
+}

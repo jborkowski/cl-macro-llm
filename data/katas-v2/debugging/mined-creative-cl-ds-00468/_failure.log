@@ -1,0 +1,13 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (READ)))
+            (UNLESS (TYPEP #:G1 'INTEGER)
+              (ERROR "Type assertion failed: ~S => ~S, not of type ~S" '(READ)
+                     #:G1 'INTEGER))
+            #:G1)
+ACTUAL:   (LET ((#:G112 (READ)))
+            (UNLESS (TYPEP #:G112 'INTEGER)
+              (ERROR "Type assertion failed: ~S => ~S, not of type ~S" '(READ)
+                     #:G112 'INTEGER))
+            #:G112)
+
+--- stderr ---

@@ -1,0 +1,13 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 3) (#:G2 (+ 1 2)))
+            (IF (EQUAL #:G1 #:G2)
+                (FORMAT *TRACE-OUTPUT* "~&PASS ~A~%" "addition")
+                (FORMAT *TRACE-OUTPUT* "~&FAIL ~A: expected ~S got ~S~%"
+                        "addition" #:G1 #:G2)))
+ACTUAL:   (LET ((#:G112 3) (#:G113 (+ 1 2)))
+            (IF (EQUAL #:G112 #:G113)
+                (FORMAT *TRACE-OUTPUT* "~&PASS ~A~%" "addition")
+                (FORMAT *TRACE-OUTPUT* "~&FAIL ~A: expected ~S got ~S~%"
+                        "addition" #:G112 #:G113)))
+
+--- stderr ---

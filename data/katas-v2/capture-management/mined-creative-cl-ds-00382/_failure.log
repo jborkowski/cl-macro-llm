@@ -1,0 +1,8 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 *DEBUG*))
+            (UNWIND-PROTECT (PROGN (SETF *DEBUG* T) (RUN)) (SETF *DEBUG* #:G1)))
+ACTUAL:   (LET ((#:G112 *DEBUG*))
+            (UNWIND-PROTECT (PROGN (SETF *DEBUG* T) (RUN))
+              (SETF *DEBUG* #:G112)))
+
+--- stderr ---

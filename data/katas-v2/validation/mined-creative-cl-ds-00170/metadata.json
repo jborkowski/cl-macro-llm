@@ -1,0 +1,13 @@
+{
+  "idx": 170,
+  "instruction": "Write a Common Lisp macro `check-same-length` that evaluates two sequence expressions exactly once and signals an error if their LENGTH values differ.",
+  "reference_defmacro": "(defmacro check-same-length (seq1 seq2)\n  (let ((g1 (gensym)) (g2 (gensym)))\n    `(let ((,g1 ,seq1) (,g2 ,seq2))\n       (unless (= (length ,g1) (length ,g2))\n         (error \"Sequences have different lengths: ~A vs ~A\" (length ,g1) (length ,g2))))))",
+  "category": "validation",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00170",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 KEYS) (#:G2 VALUES))\n            (UNLESS (= (LENGTH #:G1) (LENGTH #:G2))\n              (ERROR \"Sequences have different lengths: ~A vs ~A\" (LENGTH #:G1)\n                     (LENGTH #:G2))))\nACTUAL:   (LET ((#:G112 KEYS) (#:G113 VALUES))\n            (UNLESS (= (LENGTH #:G112) (LENGTH #:G113))\n              (ERROR \"Sequences have different lengths: ~A vs ~A\"\n                     (LENGTH #:G112) (LENGTH #:G113))))\n\n--- stderr ---"
+}

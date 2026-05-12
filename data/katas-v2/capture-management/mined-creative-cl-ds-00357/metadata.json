@@ -1,0 +1,13 @@
+{
+  "idx": 357,
+  "instruction": "Write a Common Lisp macro `bounded-incf` that adds a delta to a place but caps the result at a maximum, evaluating both delta and max expressions exactly once.",
+  "reference_defmacro": "(defmacro bounded-incf (place delta max)\n  (let ((gd (gensym)) (gm (gensym)))\n    `(let ((,gd ,delta) (,gm ,max))\n       (setf ,place (min (+ ,place ,gd) ,gm)))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00357",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (RANDOM 10)) (#:G2 100))\n            (SETF COUNTER (MIN (+ COUNTER #:G1) #:G2)))\nACTUAL:   (LET ((#:G112 (RANDOM 10)) (#:G113 100))\n            (SETF COUNTER (MIN (+ COUNTER #:G112) #:G113)))\n\n--- stderr ---"
+}

@@ -1,0 +1,13 @@
+{
+  "idx": 528,
+  "instruction": "Write a Common Lisp macro `trace-form` that evaluates a form, prints the form and its result to *trace-output*, and returns the result. Use gensym to avoid capturing user variables.",
+  "reference_defmacro": "(defmacro trace-form (form)\n  (let ((val (gensym)))\n    `(let ((,val ,form))\n       (format *trace-output* \"~&~S => ~S~%\" ',form ,val)\n       ,val)))",
+  "category": "debugging",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00528",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (+ 1 2)))\n            (FORMAT *TRACE-OUTPUT* \"~&~S => ~S~%\" '(+ 1 2) #:G1)\n            #:G1)\nACTUAL:   (LET ((#:G112 (+ 1 2)))\n            (FORMAT *TRACE-OUTPUT* \"~&~S => ~S~%\" '(+ 1 2) #:G112)\n            #:G112)\n\n--- stderr ---"
+}

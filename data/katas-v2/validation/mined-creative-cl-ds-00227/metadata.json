@@ -1,0 +1,13 @@
+{
+  "idx": 227,
+  "instruction": "Write a Common Lisp macro `with-invariant` that asserts an invariant both before and after evaluating body, returning the body's value.",
+  "reference_defmacro": "(defmacro with-invariant (invariant &body body)\n  (let ((result (gensym)))\n    `(progn\n       (assert ,invariant)\n       (let ((,result (progn ,@body)))\n         (assert ,invariant)\n         ,result))))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00227",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (PROGN\n           (ASSERT (>= BALANCE 0))\n           (LET ((#:G1 (PROGN (DEPOSIT 100))))\n             (ASSERT (>= BALANCE 0))\n             #:G1))\nACTUAL:   (PROGN\n           (ASSERT (>= BALANCE 0))\n           (LET ((#:G112 (PROGN (DEPOSIT 100))))\n             (ASSERT (>= BALANCE 0))\n             #:G112))\n\n--- stderr ---"
+}

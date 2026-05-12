@@ -1,0 +1,13 @@
+{
+  "idx": 306,
+  "instruction": "Write a Common Lisp macro `validate-plist` that evaluates a plist once and signals an error if any of the required keys is missing (its GETF lookup is nil); otherwise returns the plist.",
+  "reference_defmacro": "(defmacro validate-plist (plist &rest required-keys)\n  (let ((p (gensym)))\n    `(let ((,p ,plist))\n       ,@(mapcar (lambda (k) `(unless (getf ,p ,k) (error \"Missing key ~S\" ,k))) required-keys)\n       ,p)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00306",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 OPTS))\n            (UNLESS (GETF #:G1 :HOST) (ERROR \"Missing key ~S\" :HOST))\n            (UNLESS (GETF #:G1 :PORT) (ERROR \"Missing key ~S\" :PORT))\n            #:G1)\nACTUAL:   (LET ((#:G112 OPTS))\n            (UNLESS (GETF #:G112 :HOST) (ERROR \"Missing key ~S\" :HOST))\n            (UNLESS (GETF #:G112 :PORT) (ERROR \"Missing key ~S\" :PORT))\n            #:G112)\n\n--- stderr ---"
+}

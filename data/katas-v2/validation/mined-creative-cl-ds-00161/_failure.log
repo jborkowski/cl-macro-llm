@@ -1,0 +1,11 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (LOOKUP :KEY)))
+            (IF (NULL #:G1)
+                (ERROR "Value is nil")
+                #:G1))
+ACTUAL:   (LET ((#:G112 (LOOKUP :KEY)))
+            (IF (NULL #:G112)
+                (ERROR "Value is nil")
+                #:G112))
+
+--- stderr ---

@@ -1,0 +1,13 @@
+{
+  "idx": 497,
+  "instruction": "Write a Common Lisp macro `require-all` that evaluates a value once and signals an error if it fails any of the given predicate names; otherwise returns the value.",
+  "reference_defmacro": "(defmacro require-all (value &rest predicates)\n  (let ((v (gensym)))\n    `(let ((,v ,value))\n       ,@(mapcar (lambda (p) `(unless (,p ,v) (error \"~A failed ~A\" ,v ',p))) predicates)\n       ,v)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00497",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 X))\n            (UNLESS (NUMBERP #:G1) (ERROR \"~A failed ~A\" #:G1 'NUMBERP))\n            (UNLESS (PLUSP #:G1) (ERROR \"~A failed ~A\" #:G1 'PLUSP))\n            (UNLESS (INTEGERP #:G1) (ERROR \"~A failed ~A\" #:G1 'INTEGERP))\n            #:G1)\nACTUAL:   (LET ((#:G112 X))\n            (UNLESS (NUMBERP #:G112) (ERROR \"~A failed ~A\" #:G112 'NUMBERP))\n            (UNLESS (PLUSP #:G112) (ERROR \"~A failed ~A\" #:G112 'PLUSP))\n            (UNLESS (INTEGERP #:G112) (ERROR \"~A failed ~A\" #:G112 'INTEGERP))\n            #:G112)\n\n--- stderr ---"
+}

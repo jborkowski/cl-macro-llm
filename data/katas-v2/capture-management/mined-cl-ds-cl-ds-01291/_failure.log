@@ -1,0 +1,22 @@
+ERROR: The function COMMON-LISP-USER::NEXT is undefined.
+
+--- stderr ---
+
+; file: /tmp/tmp2j35jpu4.lisp
+; in: DEFMACRO NEXT-FFI
+;     `(LET ((,NEXT (CADR FIELDS)))
+;        (FOREIGN-TO-FFI (AND ,NEXT (FOREIGN-TYPE ,NEXT)) (CDR NAMES) (CDR PARAMS)
+;         (CDR FIELDS) BODY))
+; --> SB-IMPL::|List| 
+; ==>
+;   (SB-IMPL::|List*| NEXT '((CADR FIELDS)))
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::NEXT
+; 
+; compilation unit finished
+;   Undefined functions:
+;     NEXT WITH-GENSYMS
+;   Undefined variable:
+;     NEXT
+;   caught 1 WARNING condition

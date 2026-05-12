@@ -1,0 +1,11 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 OPTS))
+            (UNLESS (GETF #:G1 :HOST) (ERROR "Missing key ~S" :HOST))
+            (UNLESS (GETF #:G1 :PORT) (ERROR "Missing key ~S" :PORT))
+            #:G1)
+ACTUAL:   (LET ((#:G112 OPTS))
+            (UNLESS (GETF #:G112 :HOST) (ERROR "Missing key ~S" :HOST))
+            (UNLESS (GETF #:G112 :PORT) (ERROR "Missing key ~S" :PORT))
+            #:G112)
+
+--- stderr ---

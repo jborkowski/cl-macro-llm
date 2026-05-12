@@ -1,0 +1,26 @@
+ERROR: The function COMMON-LISP-USER::RANDOM-NUMBER is undefined.
+
+--- stderr ---
+
+; file: /tmp/tmpwv0c_g_h.lisp
+; in: DEFMACRO WHICHEVER
+;     (EXPAND POSSIBILITIES 0 RANDOM-NUMBER)
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::RANDOM-NUMBER
+
+;     `(LET ((,RANDOM-NUMBER (RANDOM ,LENGTH)))
+;        ,(EXPAND POSSIBILITIES 0 RANDOM-NUMBER))
+; --> SB-IMPL::|List| 
+; ==>
+;   (SB-IMPL::|List| RANDOM-NUMBER (SB-IMPL::|List| 'RANDOM LENGTH))
+; 
+; caught WARNING:
+;   undefined variable: COMMON-LISP-USER::RANDOM-NUMBER
+; 
+; compilation unit finished
+;   Undefined functions:
+;     RANDOM-NUMBER WITH-GENSYMS
+;   Undefined variable:
+;     RANDOM-NUMBER
+;   caught 2 WARNING conditions

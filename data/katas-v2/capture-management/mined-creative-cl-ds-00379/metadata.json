@@ -1,0 +1,13 @@
+{
+  "idx": 379,
+  "instruction": "Write a Common Lisp macro `square-difference` that computes (a - b) squared, evaluating both `a` and `b` exactly once and computing the difference exactly once.",
+  "reference_defmacro": "(defmacro square-difference (a b)\n  (let ((av (gensym)) (bv (gensym)) (d (gensym)))\n    `(let* ((,av ,a) (,bv ,b) (,d (- ,av ,bv)))\n       (* ,d ,d))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00379",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET* ((#:G1 X) (#:G2 (OFFSET)) (#:G3 (- #:G1 #:G2)))\n            (* #:G3 #:G3))\nACTUAL:   (LET* ((#:G112 X) (#:G113 (OFFSET)) (#:G114 (- #:G112 #:G113)))\n            (* #:G114 #:G114))\n\n--- stderr ---"
+}

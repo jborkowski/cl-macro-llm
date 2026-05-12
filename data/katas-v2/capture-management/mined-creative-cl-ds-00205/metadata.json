@@ -1,0 +1,13 @@
+{
+  "idx": 205,
+  "instruction": "Write a Common Lisp macro `do-times-safe` that iterates a user-named variable from 0 below the limit, evaluating the limit expression exactly once before the loop begins.",
+  "reference_defmacro": "(defmacro do-times-safe ((var n) &body body)\n  (let ((limit (gensym)))\n    `(let ((,limit ,n))\n       (dotimes (,var ,limit)\n         ,@body))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00205",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (COMPUTE-BOUND)))\n            (DOTIMES (I #:G1) (USE I)))\nACTUAL:   (LET ((#:G112 (COMPUTE-BOUND)))\n            (DOTIMES (I #:G112) (USE I)))\n\n--- stderr ---"
+}

@@ -1,0 +1,13 @@
+{
+  "idx": 3,
+  "instruction": "Write a Common Lisp macro `with-cwd` that temporarily sets `*default-pathname-defaults*` to a new pathname, executes the body, and restores the previous value on exit. Save the old value before doing anything.",
+  "reference_defmacro": "(defmacro with-cwd (dir &body body)\n  (let ((old (gensym)) (new (gensym)))\n    `(let ((,old *default-pathname-defaults*)\n           (,new ,dir))\n       (unwind-protect\n            (progn (setf *default-pathname-defaults* ,new)\n                   ,@body)\n         (setf *default-pathname-defaults* ,old)))))",
+  "category": "resource-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00003",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 *DEFAULT-PATHNAME-DEFAULTS*) (#:G2 #P\"/tmp/\"))\n            (UNWIND-PROTECT\n                (PROGN\n                 (SETF *DEFAULT-PATHNAME-DEFAULTS* #:G2)\n                 (LOAD \"foo.lisp\"))\n              (SETF *DEFAULT-PATHNAME-DEFAULTS* #:G1)))\nACTUAL:   (LET ((#:G112 *DEFAULT-PATHNAME-DEFAULTS*) (#:G113 #P\"/tmp/\"))\n            (UNWIND-PROTECT\n                (PROGN\n                 (SETF *DEFAULT-PATHNAME-DEFAULTS* #:G113)\n                 (LOAD \"foo.lisp\"))\n              (SETF *DEFAULT-PATHNAME-DEFAULTS* #:G112)))\n\n--- stderr ---"
+}

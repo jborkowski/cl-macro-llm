@@ -1,0 +1,13 @@
+{
+  "idx": 351,
+  "instruction": "Write a Common Lisp macro `abs-diff` that returns the absolute difference of two expressions while evaluating each expression exactly once.",
+  "reference_defmacro": "(defmacro abs-diff (a b)\n  (let ((ga (gensym)) (gb (gensym)))\n    `(let ((,ga ,a) (,gb ,b))\n       (abs (- ,ga ,gb)))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00351",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (FOO)) (#:G2 (BAR)))\n            (ABS (- #:G1 #:G2)))\nACTUAL:   (LET ((#:G112 (FOO)) (#:G113 (BAR)))\n            (ABS (- #:G112 #:G113)))\n\n--- stderr ---"
+}

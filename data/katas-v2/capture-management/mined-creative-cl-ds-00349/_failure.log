@@ -1,0 +1,9 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (COMPUTE)))
+            (LET ((C (* #:G1 #:G1 #:G1)) (S (* #:G1 #:G1)))
+              (LIST C S)))
+ACTUAL:   (LET ((#:G112 (COMPUTE)))
+            (LET ((C (* #:G112 #:G112 #:G112)) (S (* #:G112 #:G112)))
+              (LIST C S)))
+
+--- stderr ---

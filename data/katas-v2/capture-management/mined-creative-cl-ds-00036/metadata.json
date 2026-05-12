@@ -1,0 +1,13 @@
+{
+  "idx": 36,
+  "instruction": "Write a Common Lisp macro `cube-of` that returns the cube of its argument by multiplying it three times. The argument must be evaluated only once even though it appears three times in the expansion.",
+  "reference_defmacro": "(defmacro cube-of (x)\n  (let ((g (gensym)))\n    `(let ((,g ,x))\n       (* ,g ,g ,g))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00036",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (NEXT-VALUE)))\n            (* #:G1 #:G1 #:G1))\nACTUAL:   (LET ((#:G112 (NEXT-VALUE)))\n            (* #:G112 #:G112 #:G112))\n\n--- stderr ---"
+}

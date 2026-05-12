@@ -1,0 +1,13 @@
+{
+  "idx": 258,
+  "instruction": "Write a Common Lisp macro `with-collected-output` that captures everything written to *standard-output* during body into a string, and returns that string as the value of the form.",
+  "reference_defmacro": "(defmacro with-collected-output (&body body)\n  (let ((s (gensym)))\n    `(let ((,s (make-string-output-stream)))\n       (let ((*standard-output* ,s))\n         ,@body)\n       (get-output-stream-string ,s))))",
+  "category": "resource-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00258",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (MAKE-STRING-OUTPUT-STREAM)))\n            (LET ((*STANDARD-OUTPUT* #:G1))\n              (PRINC \"hi\")\n              (PRINC \"!\"))\n            (GET-OUTPUT-STREAM-STRING #:G1))\nACTUAL:   (LET ((#:G112 (MAKE-STRING-OUTPUT-STREAM)))\n            (LET ((*STANDARD-OUTPUT* #:G112))\n              (PRINC \"hi\")\n              (PRINC \"!\"))\n            (GET-OUTPUT-STREAM-STRING #:G112))\n\n--- stderr ---"
+}

@@ -1,0 +1,13 @@
+{
+  "idx": 7,
+  "instruction": "Write a Common Lisp macro `with-restored-special` that captures the current value of a special variable, runs the body (which may setf the variable), and restores the original value afterwards, even on non-local exit.",
+  "reference_defmacro": "(defmacro with-restored-special (var &body body)\n  (let ((g (gensym)))\n    `(let ((,g ,var))\n       (unwind-protect (progn ,@body)\n         (setf ,var ,g)))))",
+  "category": "resource-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00007",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 *DEBUG-LEVEL*))\n            (UNWIND-PROTECT (PROGN (SETF *DEBUG-LEVEL* 3) (DEBUG-STUFF))\n              (SETF *DEBUG-LEVEL* #:G1)))\nACTUAL:   (LET ((#:G112 *DEBUG-LEVEL*))\n            (UNWIND-PROTECT (PROGN (SETF *DEBUG-LEVEL* 3) (DEBUG-STUFF))\n              (SETF *DEBUG-LEVEL* #:G112)))\n\n--- stderr ---"
+}

@@ -1,0 +1,9 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 COUNTER))
+            (UNWIND-PROTECT (PROGN (INCF COUNTER) (PROCESS))
+              (SETF COUNTER #:G1)))
+ACTUAL:   (LET ((#:G112 COUNTER))
+            (UNWIND-PROTECT (PROGN (INCF COUNTER) (PROCESS))
+              (SETF COUNTER #:G112)))
+
+--- stderr ---

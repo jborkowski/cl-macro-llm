@@ -1,0 +1,13 @@
+{
+  "idx": 417,
+  "instruction": "Write a Common Lisp macro `count-calls-to` that temporarily replaces a function with a counting wrapper during execution of the body, restores the original on exit, and returns the call count.",
+  "reference_defmacro": "(defmacro count-calls-to (fn &body body)\n  (let ((counter (gensym)) (orig (gensym)) (args (gensym)))\n    `(let ((,counter 0))\n       (let ((,orig (symbol-function ',fn)))\n         (unwind-protect\n              (progn\n                (setf (symbol-function ',fn)\n                      (lambda (&rest ,args)\n                        (incf ,counter)\n                        (apply ,orig ,args)))\n                ,@body\n                ,counter)\n           (setf (symbol-function ',fn) ,orig))))))",
+  "category": "debugging",
+  "technique": "closure-capture",
+  "complexity": "advanced",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00417",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 0))\n            (LET ((#:G2 (SYMBOL-FUNCTION 'SQRT)))\n              (UNWIND-PROTECT\n                  (PROGN\n                   (SETF (SYMBOL-FUNCTION 'SQRT)\n                           (LAMBDA (&REST #:G3) (INCF #:G1) (APPLY #:G2 #:G3)))\n                   (MAPCAR #'SQRT '(1 4 9))\n                   #:G1)\n                (SETF (SYMBOL-FUNCTION 'SQRT) #:G2))))\nACTUAL:   (LET ((#:G112 0))\n            (LET ((#:G113 (SYMBOL-FUNCTION 'SQRT)))\n              (UNWIND-PROTECT\n                  (PROGN\n                   (SETF (SYMBOL-FUNCTION 'SQRT)\n                       "
+}

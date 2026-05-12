@@ -1,0 +1,13 @@
+{
+  "idx": 329,
+  "instruction": "Write a Common Lisp macro `with-pinned-buffer` that calls `pin-buffer` on a buffer, executes body, and guarantees `unpin-buffer` is called even if body errors. Evaluate the buffer expression once.",
+  "reference_defmacro": "(defmacro with-pinned-buffer ((buf) &body body)\n  (let ((g (gensym)))\n    `(let ((,g ,buf))\n       (pin-buffer ,g)\n       (unwind-protect (progn ,@body)\n         (unpin-buffer ,g)))))",
+  "category": "resource-management",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00329",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 B))\n            (PIN-BUFFER #:G1)\n            (UNWIND-PROTECT (PROGN (PROCESS B)) (UNPIN-BUFFER #:G1)))\nACTUAL:   (LET ((#:G112 B))\n            (PIN-BUFFER #:G112)\n            (UNWIND-PROTECT (PROGN (PROCESS B)) (UNPIN-BUFFER #:G112)))\n\n--- stderr ---"
+}

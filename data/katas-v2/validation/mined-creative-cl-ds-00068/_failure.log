@@ -1,0 +1,11 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (- X 1)))
+            (UNLESS (AND (NUMBERP #:G1) (PLUSP #:G1))
+              (ERROR "Expected positive number, got ~S" #:G1))
+            #:G1)
+ACTUAL:   (LET ((#:G112 (- X 1)))
+            (UNLESS (AND (NUMBERP #:G112) (PLUSP #:G112))
+              (ERROR "Expected positive number, got ~S" #:G112))
+            #:G112)
+
+--- stderr ---

@@ -1,0 +1,13 @@
+{
+  "idx": 381,
+  "instruction": "Write a Common Lisp macro `lerp` that linearly interpolates between `a` and `b` by ratio `r`, computing a*(1-r) + b*r. The ratio is used twice, so it must be bound to a gensym; `a` and `b` are also evaluated exactly once.",
+  "reference_defmacro": "(defmacro lerp (a b ratio)\n  (let ((av (gensym)) (bv (gensym)) (rv (gensym)))\n    `(let ((,av ,a) (,bv ,b) (,rv ,ratio))\n       (+ (* ,av (- 1 ,rv)) (* ,bv ,rv)))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00381",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (START)) (#:G2 (END)) (#:G3 0.5))\n            (+ (* #:G1 (- 1 #:G3)) (* #:G2 #:G3)))\nACTUAL:   (LET ((#:G112 (START)) (#:G113 (END)) (#:G114 0.5))\n            (+ (* #:G112 (- 1 #:G114)) (* #:G113 #:G114)))\n\n--- stderr ---"
+}

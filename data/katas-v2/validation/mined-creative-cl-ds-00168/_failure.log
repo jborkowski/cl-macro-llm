@@ -1,0 +1,9 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (GET-ITEMS)))
+            (UNLESS (LISTP #:G1) (ERROR "Expected list, got ~S" #:G1))
+            #:G1)
+ACTUAL:   (LET ((#:G112 (GET-ITEMS)))
+            (UNLESS (LISTP #:G112) (ERROR "Expected list, got ~S" #:G112))
+            #:G112)
+
+--- stderr ---

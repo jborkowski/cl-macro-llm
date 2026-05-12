@@ -1,0 +1,7 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (FOO)) (#:G2 (BAR)))
+            (ABS (- #:G1 #:G2)))
+ACTUAL:   (LET ((#:G112 (FOO)) (#:G113 (BAR)))
+            (ABS (- #:G112 #:G113)))
+
+--- stderr ---

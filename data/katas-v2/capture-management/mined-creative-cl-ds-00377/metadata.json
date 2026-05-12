@@ -1,0 +1,13 @@
+{
+  "idx": 377,
+  "instruction": "Write a Common Lisp macro `max-of-three` that returns the largest of three expressions, evaluating each exactly once. Use gensyms so that side-effecting arguments are not evaluated multiple times in the comparisons.",
+  "reference_defmacro": "(defmacro max-of-three (a b c)\n  (let ((av (gensym)) (bv (gensym)) (cv (gensym)))\n    `(let ((,av ,a) (,bv ,b) (,cv ,c))\n       (if (> ,av ,bv)\n           (if (> ,av ,cv) ,av ,cv)\n           (if (> ,bv ,cv) ,bv ,cv)))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00377",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (F)) (#:G2 (G)) (#:G3 (H)))\n            (IF (> #:G1 #:G2)\n                (IF (> #:G1 #:G3)\n                    #:G1\n                    #:G3)\n                (IF (> #:G2 #:G3)\n                    #:G2\n                    #:G3)))\nACTUAL:   (LET ((#:G112 (F)) (#:G113 (G)) (#:G114 (H)))\n            (IF (> #:G112 #:G113)\n                (IF (> #:G112 #:G114)\n                    #:G112\n                    #:G114)\n                (IF (> #:G113 #:G114)\n                    #:G113\n                    #:G114)))\n\n--- stderr ---"
+}

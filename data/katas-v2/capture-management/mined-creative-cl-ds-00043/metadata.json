@@ -1,0 +1,13 @@
+{
+  "idx": 43,
+  "instruction": "Write a Common Lisp macro `safe-divide` that divides its first argument by its second, returning 0 when the divisor is zero. The divisor must be evaluated only once even though it is both tested and used.",
+  "reference_defmacro": "(defmacro safe-divide (x y)\n  (let ((g (gensym)))\n    `(let ((,g ,y))\n       (if (zerop ,g) 0 (/ ,x ,g)))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00043",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 COUNT))\n            (IF (ZEROP #:G1)\n                0\n                (/ TOTAL #:G1)))\nACTUAL:   (LET ((#:G112 COUNT))\n            (IF (ZEROP #:G112)\n                0\n                (/ TOTAL #:G112)))\n\n--- stderr ---"
+}

@@ -1,0 +1,11 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 SCORE))
+            (UNLESS (AND (>= #:G1 0) (<= #:G1 100))
+              (ERROR "Value ~S not in [~S, ~S]" #:G1 0 100))
+            #:G1)
+ACTUAL:   (LET ((#:G112 SCORE))
+            (UNLESS (AND (>= #:G112 0) (<= #:G112 100))
+              (ERROR "Value ~S not in [~S, ~S]" #:G112 0 100))
+            #:G112)
+
+--- stderr ---

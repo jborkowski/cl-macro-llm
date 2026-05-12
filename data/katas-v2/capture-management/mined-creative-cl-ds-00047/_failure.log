@@ -1,0 +1,7 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 1) (#:G2 100))
+            (+ #:G1 (RANDOM (- #:G2 #:G1))))
+ACTUAL:   (LET ((#:G112 1) (#:G113 100))
+            (+ #:G112 (RANDOM (- #:G113 #:G112))))
+
+--- stderr ---

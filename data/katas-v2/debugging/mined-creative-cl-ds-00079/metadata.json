@@ -1,0 +1,13 @@
+{
+  "idx": 79,
+  "instruction": "Write a Common Lisp macro `time-tagged` that measures the wall-clock duration of running a body, prints the duration with a label to *trace-output*, and returns the body's value.",
+  "reference_defmacro": "(defmacro time-tagged (label &body body)\n  (let ((start (gensym)) (result (gensym)))\n    `(let ((,start (get-internal-real-time)))\n       (let ((,result (progn ,@body)))\n         (format *trace-output* \"~&[~A] ~Fs~%\" ,label\n                 (/ (- (get-internal-real-time) ,start)\n                    (float internal-time-units-per-second)))\n         ,result))))",
+  "category": "debugging",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00079",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (GET-INTERNAL-REAL-TIME)))\n            (LET ((#:G2 (PROGN (FETCH-DATA))))\n              (FORMAT *TRACE-OUTPUT* \"~&[~A] ~Fs~%\" \"fetch\"\n                      (/ (- (GET-INTERNAL-REAL-TIME) #:G1)\n                         (FLOAT INTERNAL-TIME-UNITS-PER-SECOND)))\n              #:G2))\nACTUAL:   (LET ((#:G112 (GET-INTERNAL-REAL-TIME)))\n            (LET ((#:G113 (PROGN (FETCH-DATA))))\n              (FORMAT *TRACE-OUTPUT* \"~&[~A] ~Fs~%\" \"fetch\"\n                      (/ (- (GET-INTERNAL-REAL-TIME) #:G112)\n                         (FLOAT INTERNAL-TIME-UNITS-PER-SECOND)))\n  "
+}

@@ -1,0 +1,13 @@
+{
+  "idx": 0,
+  "instruction": "Write a Common Lisp macro `with-temp-file` that binds a variable to a temporary file path, executes the body, and deletes the file when finished (even on non-local exit). Evaluate the path expression once.",
+  "reference_defmacro": "(defmacro with-temp-file ((var path) &body body)\n  (let ((g (gensym)))\n    `(let* ((,g ,path) (,var ,g))\n       (unwind-protect\n            (progn ,@body)\n         (when (probe-file ,g) (delete-file ,g))))))",
+  "category": "resource-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00000",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET* ((#:G1 \"/tmp/foo.txt\") (F #:G1))\n            (UNWIND-PROTECT (PROGN (WRITE-STUFF F))\n              (WHEN (PROBE-FILE #:G1) (DELETE-FILE #:G1))))\nACTUAL:   (LET* ((#:G112 \"/tmp/foo.txt\") (F #:G112))\n            (UNWIND-PROTECT (PROGN (WRITE-STUFF F))\n              (WHEN (PROBE-FILE #:G112) (DELETE-FILE #:G112))))\n\n--- stderr ---"
+}

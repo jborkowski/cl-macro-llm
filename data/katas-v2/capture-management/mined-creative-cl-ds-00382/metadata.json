@@ -1,0 +1,13 @@
+{
+  "idx": 382,
+  "instruction": "Write a Common Lisp macro `with-stashed-binding` that saves the current value of a variable in a gensym, sets the variable to a new value, runs body, and restores the original value on exit using unwind-protect.",
+  "reference_defmacro": "(defmacro with-stashed-binding (var new-val &body body)\n  (let ((saved (gensym)))\n    `(let ((,saved ,var))\n       (unwind-protect\n            (progn (setf ,var ,new-val) ,@body)\n         (setf ,var ,saved)))))",
+  "category": "capture-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00382",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 *DEBUG*))\n            (UNWIND-PROTECT (PROGN (SETF *DEBUG* T) (RUN)) (SETF *DEBUG* #:G1)))\nACTUAL:   (LET ((#:G112 *DEBUG*))\n            (UNWIND-PROTECT (PROGN (SETF *DEBUG* T) (RUN))\n              (SETF *DEBUG* #:G112)))\n\n--- stderr ---"
+}

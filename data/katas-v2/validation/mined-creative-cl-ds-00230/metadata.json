@@ -1,0 +1,13 @@
+{
+  "idx": 230,
+  "instruction": "Write a Common Lisp macro `assert-divides` that signals an error if a divisor does not evenly divide a value; otherwise returns the value. Each argument is evaluated exactly once.",
+  "reference_defmacro": "(defmacro assert-divides (divisor value)\n  (let ((d (gensym)) (v (gensym)))\n    `(let ((,d ,divisor) (,v ,value))\n       (unless (zerop (mod ,v ,d))\n         (error \"~S does not divide ~S\" ,d ,v))\n       ,v)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00230",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 3) (#:G2 AMOUNT))\n            (UNLESS (ZEROP (MOD #:G2 #:G1))\n              (ERROR \"~S does not divide ~S\" #:G1 #:G2))\n            #:G2)\nACTUAL:   (LET ((#:G112 3) (#:G113 AMOUNT))\n            (UNLESS (ZEROP (MOD #:G113 #:G112))\n              (ERROR \"~S does not divide ~S\" #:G112 #:G113))\n            #:G113)\n\n--- stderr ---"
+}

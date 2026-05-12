@@ -1,0 +1,13 @@
+{
+  "idx": 44,
+  "instruction": "Write a Common Lisp macro `xor2` that returns true when exactly one of two expressions is truthy. Each expression must be evaluated only once even though both are inspected twice in the resulting boolean logic.",
+  "reference_defmacro": "(defmacro xor2 (a b)\n  (let ((ga (gensym)) (gb (gensym)))\n    `(let ((,ga ,a) (,gb ,b))\n       (and (or ,ga ,gb) (not (and ,ga ,gb))))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00044",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 P) (#:G2 Q))\n            (AND (OR #:G1 #:G2) (NOT (AND #:G1 #:G2))))\nACTUAL:   (LET ((#:G112 P) (#:G113 Q))\n            (AND (OR #:G112 #:G113) (NOT (AND #:G112 #:G113))))\n\n--- stderr ---"
+}

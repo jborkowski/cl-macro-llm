@@ -1,0 +1,13 @@
+{
+  "idx": 353,
+  "instruction": "Write a Common Lisp macro `with-saved` that captures the current value of a place into a hidden gensym, runs body, and restores the place's original value when body exits (even on non-local exits).",
+  "reference_defmacro": "(defmacro with-saved (place &body body)\n  (let ((saved (gensym)))\n    `(let ((,saved ,place))\n       (unwind-protect (progn ,@body) (setf ,place ,saved)))))",
+  "category": "capture-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00353",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 COUNTER))\n            (UNWIND-PROTECT (PROGN (INCF COUNTER) (PROCESS))\n              (SETF COUNTER #:G1)))\nACTUAL:   (LET ((#:G112 COUNTER))\n            (UNWIND-PROTECT (PROGN (INCF COUNTER) (PROCESS))\n              (SETF COUNTER #:G112)))\n\n--- stderr ---"
+}

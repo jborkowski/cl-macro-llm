@@ -1,0 +1,9 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 *LOCK*))
+            (ACQUIRE-LOCK #:G1)
+            (UNWIND-PROTECT (PROGN (INCF *COUNTER*)) (RELEASE-LOCK #:G1)))
+ACTUAL:   (LET ((#:G112 *LOCK*))
+            (ACQUIRE-LOCK #:G112)
+            (UNWIND-PROTECT (PROGN (INCF *COUNTER*)) (RELEASE-LOCK #:G112)))
+
+--- stderr ---

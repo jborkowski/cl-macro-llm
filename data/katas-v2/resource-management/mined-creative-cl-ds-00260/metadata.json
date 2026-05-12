@@ -1,0 +1,13 @@
+{
+  "idx": 260,
+  "instruction": "Write a Common Lisp macro `with-saved-variable` that saves the current value of a special variable, sets it to a new value for the duration of body, and restores the old value via unwind-protect.",
+  "reference_defmacro": "(defmacro with-saved-variable ((var new) &body body)\n  (let ((old (gensym)))\n    `(let ((,old ,var))\n       (unwind-protect\n            (progn (setf ,var ,new) ,@body)\n         (setf ,var ,old)))))",
+  "category": "resource-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00260",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 *FOO*))\n            (UNWIND-PROTECT (PROGN (SETF *FOO* 42) (USE-FOO))\n              (SETF *FOO* #:G1)))\nACTUAL:   (LET ((#:G112 *FOO*))\n            (UNWIND-PROTECT (PROGN (SETF *FOO* 42) (USE-FOO))\n              (SETF *FOO* #:G112)))\n\n--- stderr ---"
+}

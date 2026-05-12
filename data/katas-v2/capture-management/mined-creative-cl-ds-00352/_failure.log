@@ -1,0 +1,9 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (GET-VEC)))
+            (LET ((X (FIRST #:G1)) (Y (SECOND #:G1)) (Z (THIRD #:G1)))
+              (+ X Y Z)))
+ACTUAL:   (LET ((#:G112 (GET-VEC)))
+            (LET ((X (FIRST #:G112)) (Y (SECOND #:G112)) (Z (THIRD #:G112)))
+              (+ X Y Z)))
+
+--- stderr ---

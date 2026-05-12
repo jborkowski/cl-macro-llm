@@ -1,0 +1,13 @@
+{
+  "idx": 226,
+  "instruction": "Write a Common Lisp macro `assert-bounded` that signals an error if a numeric value is not within an inclusive range [lo, hi]. Evaluates the value once.",
+  "reference_defmacro": "(defmacro assert-bounded (value lo hi)\n  (let ((g (gensym)))\n    `(let ((,g ,value))\n       (unless (and (>= ,g ,lo) (<= ,g ,hi))\n         (error \"Value ~S not in [~S, ~S]\" ,g ,lo ,hi))\n       ,g)))",
+  "category": "validation",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00226",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 SCORE))\n            (UNLESS (AND (>= #:G1 0) (<= #:G1 100))\n              (ERROR \"Value ~S not in [~S, ~S]\" #:G1 0 100))\n            #:G1)\nACTUAL:   (LET ((#:G112 SCORE))\n            (UNLESS (AND (>= #:G112 0) (<= #:G112 100))\n              (ERROR \"Value ~S not in [~S, ~S]\" #:G112 0 100))\n            #:G112)\n\n--- stderr ---"
+}

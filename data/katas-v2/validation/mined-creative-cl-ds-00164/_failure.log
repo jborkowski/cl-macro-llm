@@ -1,0 +1,9 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (DENOMINATOR X)))
+            (WHEN (ZEROP #:G1) (ERROR "Value must not be zero"))
+            #:G1)
+ACTUAL:   (LET ((#:G112 (DENOMINATOR X)))
+            (WHEN (ZEROP #:G112) (ERROR "Value must not be zero"))
+            #:G112)
+
+--- stderr ---

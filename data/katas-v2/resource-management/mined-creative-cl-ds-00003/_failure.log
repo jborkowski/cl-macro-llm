@@ -1,0 +1,15 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 *DEFAULT-PATHNAME-DEFAULTS*) (#:G2 #P"/tmp/"))
+            (UNWIND-PROTECT
+                (PROGN
+                 (SETF *DEFAULT-PATHNAME-DEFAULTS* #:G2)
+                 (LOAD "foo.lisp"))
+              (SETF *DEFAULT-PATHNAME-DEFAULTS* #:G1)))
+ACTUAL:   (LET ((#:G112 *DEFAULT-PATHNAME-DEFAULTS*) (#:G113 #P"/tmp/"))
+            (UNWIND-PROTECT
+                (PROGN
+                 (SETF *DEFAULT-PATHNAME-DEFAULTS* #:G113)
+                 (LOAD "foo.lisp"))
+              (SETF *DEFAULT-PATHNAME-DEFAULTS* #:G112)))
+
+--- stderr ---

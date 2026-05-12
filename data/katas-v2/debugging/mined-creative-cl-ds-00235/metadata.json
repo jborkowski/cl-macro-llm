@@ -1,0 +1,13 @@
+{
+  "idx": 235,
+  "instruction": "Write a Common Lisp macro `log-call` that invokes a function with the given arguments, prints a CALL line with the function name, arg list, and result, and returns the result.",
+  "reference_defmacro": "(defmacro log-call (fn &rest args)\n  (let ((result (gensym)))\n    `(let ((,result (,fn ,@args)))\n       (format *trace-output* \"~&CALL ~S~{ ~S~} => ~S~%\" ',fn (list ,@args) ,result)\n       ,result)))",
+  "category": "debugging",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00235",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (SQRT 16)))\n            (FORMAT *TRACE-OUTPUT* \"~&CALL ~S~{ ~S~} => ~S~%\" 'SQRT (LIST 16)\n                    #:G1)\n            #:G1)\nACTUAL:   (LET ((#:G112 (SQRT 16)))\n            (FORMAT *TRACE-OUTPUT* \"~&CALL ~S~{ ~S~} => ~S~%\" 'SQRT (LIST 16)\n                    #:G112)\n            #:G112)\n\n--- stderr ---"
+}

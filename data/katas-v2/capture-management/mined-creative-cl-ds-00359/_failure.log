@@ -1,0 +1,11 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 (COMPUTE)))
+            (IF (MINUSP #:G1)
+                0
+                (SQRT #:G1)))
+ACTUAL:   (LET ((#:G112 (COMPUTE)))
+            (IF (MINUSP #:G112)
+                0
+                (SQRT #:G112)))
+
+--- stderr ---

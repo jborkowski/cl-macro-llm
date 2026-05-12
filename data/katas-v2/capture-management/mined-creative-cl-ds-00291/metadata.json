@@ -1,0 +1,13 @@
+{
+  "idx": 291,
+  "instruction": "Write a Common Lisp macro `with-saved-place` that snapshots a place's current value, executes body, and restores the place to the snapshotted value when body unwinds (normally or via non-local exit). Use a gensym to hold the saved value.",
+  "reference_defmacro": "(defmacro with-saved-place (place &body body)\n  (let ((g (gensym)))\n    `(let ((,g ,place))\n       (unwind-protect (progn ,@body)\n         (setf ,place ,g)))))",
+  "category": "capture-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00291",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 *DB*))\n            (UNWIND-PROTECT (PROGN (SETF *DB* :TEST) (RUN-TESTS))\n              (SETF *DB* #:G1)))\nACTUAL:   (LET ((#:G112 *DB*))\n            (UNWIND-PROTECT (PROGN (SETF *DB* :TEST) (RUN-TESTS))\n              (SETF *DB* #:G112)))\n\n--- stderr ---"
+}

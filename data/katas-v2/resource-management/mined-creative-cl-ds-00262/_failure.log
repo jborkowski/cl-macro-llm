@@ -1,0 +1,17 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 "/tmp/app.pid"))
+            (WITH-OPEN-FILE
+                (#:G2 #:G1 :DIRECTION :OUTPUT :IF-EXISTS :SUPERSEDE
+                 :IF-DOES-NOT-EXIST :CREATE)
+              (FORMAT #:G2 "~A" (RANDOM 1000000)))
+            (UNWIND-PROTECT (PROGN (SERVE))
+              (WHEN (PROBE-FILE #:G1) (DELETE-FILE #:G1))))
+ACTUAL:   (LET ((#:G112 "/tmp/app.pid"))
+            (WITH-OPEN-FILE
+                (#:G113 #:G112 :DIRECTION :OUTPUT :IF-EXISTS :SUPERSEDE
+                 :IF-DOES-NOT-EXIST :CREATE)
+              (FORMAT #:G113 "~A" (RANDOM 1000000)))
+            (UNWIND-PROTECT (PROGN (SERVE))
+              (WHEN (PROBE-FILE #:G112) (DELETE-FILE #:G112))))
+
+--- stderr ---

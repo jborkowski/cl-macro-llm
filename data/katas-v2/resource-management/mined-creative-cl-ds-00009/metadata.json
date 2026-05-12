@@ -1,0 +1,13 @@
+{
+  "idx": 9,
+  "instruction": "Write a Common Lisp macro `with-trace` that prints an `Enter LABEL` line before the body and an `Exit LABEL` line after the body, evaluating the label only once and guaranteeing the exit message via unwind-protect.",
+  "reference_defmacro": "(defmacro with-trace (label &body body)\n  (let ((g (gensym)))\n    `(let ((,g ,label))\n       (format t \"~&Enter ~A~%\" ,g)\n       (unwind-protect (progn ,@body)\n         (format t \"~&Exit ~A~%\" ,g)))))",
+  "category": "resource-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00009",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 \"compute\"))\n            (FORMAT T \"~&Enter ~A~%\" #:G1)\n            (UNWIND-PROTECT (PROGN (HEAVY-WORK)) (FORMAT T \"~&Exit ~A~%\" #:G1)))\nACTUAL:   (LET ((#:G112 \"compute\"))\n            (FORMAT T \"~&Enter ~A~%\" #:G112)\n            (UNWIND-PROTECT (PROGN (HEAVY-WORK))\n              (FORMAT T \"~&Exit ~A~%\" #:G112)))\n\n--- stderr ---"
+}

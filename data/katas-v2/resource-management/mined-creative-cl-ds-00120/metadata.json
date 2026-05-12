@@ -1,0 +1,13 @@
+{
+  "idx": 120,
+  "instruction": "Write a Common Lisp macro `with-saved-random-state` that snapshots *random-state* (via make-random-state to copy it) before body, runs body which may consume randomness, and restores *random-state* on exit so subsequent random calls reproduce.",
+  "reference_defmacro": "(defmacro with-saved-random-state (&body body)\n  (let ((saved (gensym)))\n    `(let ((,saved (make-random-state *random-state*)))\n       (unwind-protect (progn ,@body)\n         (setf *random-state* ,saved)))))",
+  "category": "resource-management",
+  "technique": "gensym",
+  "complexity": "intermediate",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00120",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (MAKE-RANDOM-STATE *RANDOM-STATE*)))\n            (UNWIND-PROTECT (PROGN (RANDOM 10) (RANDOM 10))\n              (SETF *RANDOM-STATE* #:G1)))\nACTUAL:   (LET ((#:G112 (MAKE-RANDOM-STATE *RANDOM-STATE*)))\n            (UNWIND-PROTECT (PROGN (RANDOM 10) (RANDOM 10))\n              (SETF *RANDOM-STATE* #:G112)))\n\n--- stderr ---"
+}

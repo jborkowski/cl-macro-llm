@@ -1,0 +1,13 @@
+{
+  "idx": 354,
+  "instruction": "Write a Common Lisp macro `hypot-of` that returns the hypotenuse sqrt(a^2 + b^2) of two expressions while evaluating each expression exactly once.",
+  "reference_defmacro": "(defmacro hypot-of (a b)\n  (let ((ga (gensym)) (gb (gensym)))\n    `(let ((,ga ,a) (,gb ,b))\n       (sqrt (+ (* ,ga ,ga) (* ,gb ,gb))))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00354",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (DX)) (#:G2 (DY)))\n            (SQRT (+ (* #:G1 #:G1) (* #:G2 #:G2))))\nACTUAL:   (LET ((#:G112 (DX)) (#:G113 (DY)))\n            (SQRT (+ (* #:G112 #:G112) (* #:G113 #:G113))))\n\n--- stderr ---"
+}

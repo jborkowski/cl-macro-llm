@@ -1,0 +1,11 @@
+MISMATCH
+EXPECTED: (LET ((#:G1 OBJ))
+            (UNLESS (TYPEP #:G1 'ACCOUNT)
+              (ERROR "~A is not an instance of ~A" #:G1 'ACCOUNT))
+            #:G1)
+ACTUAL:   (LET ((#:G112 OBJ))
+            (UNLESS (TYPEP #:G112 'ACCOUNT)
+              (ERROR "~A is not an instance of ~A" #:G112 'ACCOUNT))
+            #:G112)
+
+--- stderr ---

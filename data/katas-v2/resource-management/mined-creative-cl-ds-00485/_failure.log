@@ -1,0 +1,9 @@
+MISMATCH
+EXPECTED: (LET* ((#:G1 (FORMAT NIL "TMP-~A" (GENSYM)))
+                 (P (MAKE-PACKAGE #:G1 :USE '(:CL))))
+            (UNWIND-PROTECT (PROGN (INTERN "FOO" P)) (DELETE-PACKAGE P)))
+ACTUAL:   (LET* ((#:G112 (FORMAT NIL "TMP-~A" (GENSYM)))
+                 (P (MAKE-PACKAGE #:G112 :USE '(:CL))))
+            (UNWIND-PROTECT (PROGN (INTERN "FOO" P)) (DELETE-PACKAGE P)))
+
+--- stderr ---

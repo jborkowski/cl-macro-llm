@@ -1,0 +1,13 @@
+{
+  "idx": 209,
+  "instruction": "Write a Common Lisp macro `tap` that evaluates its argument once, prints the value as a debugging side effect, and returns that same value. Useful for inserting trace output into a pipeline without disturbing its result.",
+  "reference_defmacro": "(defmacro tap (expr)\n  (let ((v (gensym)))\n    `(let ((,v ,expr))\n       (print ,v)\n       ,v)))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00209",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (COMPUTE)))\n            (PRINT #:G1)\n            #:G1)\nACTUAL:   (LET ((#:G112 (COMPUTE)))\n            (PRINT #:G112)\n            #:G112)\n\n--- stderr ---"
+}

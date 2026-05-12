@@ -1,0 +1,13 @@
+{
+  "idx": 421,
+  "instruction": "Write a Common Lisp macro `dbg-when` that evaluates an expression and returns its value; the expression and value are logged to *trace-output* only when a guard test is true.",
+  "reference_defmacro": "(defmacro dbg-when (test expr)\n  (let ((val (gensym)))\n    `(let ((,val ,expr))\n       (when ,test\n         (format *trace-output* \"~&DBG: ~S => ~S~%\" ',expr ,val))\n       ,val)))",
+  "category": "debugging",
+  "technique": "gensym",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00421",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (COMPUTE)))\n            (WHEN *DEBUG*\n              (FORMAT *TRACE-OUTPUT* \"~&DBG: ~S => ~S~%\" '(COMPUTE) #:G1))\n            #:G1)\nACTUAL:   (LET ((#:G112 (COMPUTE)))\n            (WHEN *DEBUG*\n              (FORMAT *TRACE-OUTPUT* \"~&DBG: ~S => ~S~%\" '(COMPUTE) #:G112))\n            #:G112)\n\n--- stderr ---"
+}

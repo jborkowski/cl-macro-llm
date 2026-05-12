@@ -1,0 +1,13 @@
+{
+  "idx": 360,
+  "instruction": "Write a Common Lisp predicate macro `power-of-two-p` that tests whether an integer expression is a positive power of two, evaluating the expression only once.",
+  "reference_defmacro": "(defmacro power-of-two-p (x)\n  (let ((g (gensym)))\n    `(let ((,g ,x))\n       (and (plusp ,g) (zerop (logand ,g (1- ,g)))))))",
+  "category": "capture-management",
+  "technique": "once-only",
+  "complexity": "basic",
+  "quality_score": 1.0,
+  "requires_detected": [],
+  "source": "mined-cl-ds-rejected",
+  "mined_from": "data/grpo-sanity/katas/creative/_rejected/cl-ds-00360",
+  "original_failure_log_excerpt": "MISMATCH\nEXPECTED: (LET ((#:G1 (COMPUTE)))\n            (AND (PLUSP #:G1) (ZEROP (LOGAND #:G1 (1- #:G1)))))\nACTUAL:   (LET ((#:G112 (COMPUTE)))\n            (AND (PLUSP #:G112) (ZEROP (LOGAND #:G112 (1- #:G112)))))\n\n--- stderr ---"
+}
