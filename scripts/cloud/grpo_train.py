@@ -504,6 +504,14 @@ def main() -> int:
         max_completion_length=MAX_COMPLETION_LEN,
         max_prompt_length=512,
         gradient_checkpointing=True,
+        # use_reentrant=False routes activation checkpoints through the newer
+        # PyTorch path that frees scratch buffers between chunks instead of
+        # holding them for the full step. Combined with `paged_adamw_8bit`
+        # (Adam state paged to host RAM via bitsandbytes), this is the
+        # bf16-fidelity CPU-offload route — no quality compromise vs 4-bit
+        # base, paid for in step time.
+        gradient_checkpointing_kwargs={"use_reentrant": False},
+        optim="paged_adamw_8bit",
         beta=BETA,
         logging_steps=5,
         # trl GRPOConfig.__post_init__ requires eval_batch_size * world_size

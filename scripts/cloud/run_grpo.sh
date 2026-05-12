@@ -86,8 +86,16 @@ echo "  prereqs OK"
 # ─── 2. train ─────────────────────────────────────────────────────────
 step "2/3 train ($FULL_STEPS steps)"
 mkdir -p "$OUTPUT_DIR/full"
+# Memory-tight Unsloth knobs. Our OOM trace lands in
+# `chunked_hidden_states_selective_log_softmax` (2.37 GB scratch on top of
+# 77.89 GB used / 79.26 GB total). Setting both knobs to 1 forces the
+# smallest log-softmax chunk and one-completion-at-a-time GRPO inner loop —
+# slower, but trades time for VRAM at full bf16. Override either knob from
+# the caller if a future GPU has slack.
 KATA_ROOT="$KATA_ROOT" SFT_ADAPTER="$SFT_ADAPTER" OUTPUT_DIR="$OUTPUT_DIR/full" \
     MAX_STEPS="$FULL_STEPS" \
+    UNSLOTH_LOGIT_CHUNK_MULTIPLIER="${UNSLOTH_LOGIT_CHUNK_MULTIPLIER:-1}" \
+    UNSLOTH_GRPO_MINI_BATCH="${UNSLOTH_GRPO_MINI_BATCH:-1}" \
     python scripts/cloud/grpo_train.py 2>&1 | tee "$OUTPUT_DIR/full.log"
 grep -q "Training summary" "$OUTPUT_DIR/full.log" || \
     fail "train aborted before final save — see $OUTPUT_DIR/full.log"

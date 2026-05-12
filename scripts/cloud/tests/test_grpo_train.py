@@ -603,11 +603,14 @@ def test_grpoconfig_unsloth_defaults_visible():
     assert grpo_train.MASK_TRUNCATED_COMPLETIONS is True
 
 
-def test_unsloth_vllm_standby_is_set_at_import():
+def test_unsloth_env_defaults_planted_at_import():
     import os
-    # The module set it on import; even if the test env didn't have it,
-    # importing grpo_train (above) should have planted the default.
-    assert os.environ.get("UNSLOTH_VLLM_STANDBY") == "1"
+    # Module sets these on import. STANDBY is OFF (use_vllm=False, so the
+    # rollout-weight swap dance buys nothing and silently strips
+    # PYTORCH_ALLOC_CONF, which is the thing actually keeping us off the
+    # OOM cliff at the chunked log-softmax allocation).
+    assert os.environ.get("UNSLOTH_VLLM_STANDBY") == "0"
+    assert "expandable_segments:True" in os.environ.get("PYTORCH_ALLOC_CONF", "")
 
 
 if __name__ == "__main__":
