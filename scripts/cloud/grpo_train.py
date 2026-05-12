@@ -37,7 +37,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import statistics
 import sys
 from pathlib import Path
 
@@ -46,7 +45,6 @@ from pathlib import Path
 # set before unsloth is imported.
 os.environ.setdefault("UNSLOTH_VLLM_STANDBY", "1")
 
-import torch
 from datasets import Dataset
 from unsloth import FastLanguageModel
 from trl import GRPOConfig, GRPOTrainer
@@ -85,10 +83,6 @@ MASK_TRUNCATED_COMPLETIONS      = _env("MASK_TRUNCATED_COMPLETIONS", "1") != "0"
 UNSLOTH_GRPO_MINI_BATCH         = _env("UNSLOTH_GRPO_MINI_BATCH", "")
 UNSLOTH_LOGIT_CHUNK_MULTIPLIER  = _env("UNSLOTH_LOGIT_CHUNK_MULTIPLIER", "")
 
-# Baseline-only: run the SFT policy over the eval split, compute mean
-# reward, print baseline_mean=<float> and exit before constructing the
-# trainer. Gate C of run_grpo.sh depends on this.
-BASELINE_ONLY       = _env("BASELINE_ONLY", "") not in ("", "0", "false", "False")
 EVAL_TEST_SIZE      = float(_env("EVAL_TEST_SIZE", "0.1"))
 
 
@@ -441,96 +435,6 @@ class RuntimeControlCallback(TrainerCallback):
         return control
 
 
-# ─── baseline-only mode ───────────────────────────────────────────────
-
-def _run_baseline(model, tokenizer, eval_ds) -> int:
-    """Batched baseline: generate BASELINE_BATCH prompts at once on GPU,
-    then score the whole batch in parallel via macro_gym_reward (which
-    uses the threadpool of SBCLs).
-
-    Was serial (1 prompt → 1 reward call → 1 SBCL active at a time).
-    Now: batch_size prompts go through model.generate as one batched
-    inference call, and the resulting N completions are scored in
-    parallel across N SBCLs from the per-kata pools — saturating both
-    GPU and the SBCL pool instead of leaving one idle while the other
-    works.
-
-    Gate C consumer parses the `baseline_mean=` line.
-    """
-    FastLanguageModel.for_inference(model)
-    rewards: list[float] = []
-    n = len(eval_ds)
-    batch_size = int(_env("BASELINE_BATCH", "8"))
-    print(f"\n=== Baseline rollout over {n} eval katas "
-          f"(batch_size={batch_size}) ===")
-
-    # Qwen3.6's processor pads on the right by default which corrupts
-    # autoregressive decoding for the first sample in the batch. Force
-    # left-padding so each generation starts at the same logical position.
-    if hasattr(tokenizer, "padding_side"):
-        tokenizer.padding_side = "left"
-
-    pad_token_id = (tokenizer.pad_token_id
-                    or tokenizer.eos_token_id)
-
-    for batch_start in range(0, n, batch_size):
-        batch_end = min(batch_start + batch_size, n)
-        batch_rows = [eval_ds[i] for i in range(batch_start, batch_end)]
-
-        prompt_texts = [
-            tokenizer.apply_chat_template(
-                r["prompt"], tokenize=False, add_generation_prompt=True
-            ) for r in batch_rows
-        ]
-        # Qwen3.6 tokenizer is Qwen3VLProcessor — force text= kwarg.
-        inputs = tokenizer(
-            text=prompt_texts, return_tensors="pt", padding=True,
-        ).to(model.device)
-
-        with torch.inference_mode():
-            out = model.generate(
-                **inputs,
-                max_new_tokens=MAX_COMPLETION_LEN,
-                do_sample=True,
-                temperature=TEMPERATURE,
-                top_p=0.95,
-                pad_token_id=pad_token_id,
-            )
-
-        # Slice off the prompt portion of each sequence in the batch.
-        prompt_len = inputs.input_ids.shape[1]
-        completions = [
-            tokenizer.decode(out[j, prompt_len:], skip_special_tokens=True)
-            for j in range(len(batch_rows))
-        ]
-
-        batch_rewards = macro_gym_reward(
-            prompts=[r["prompt"]   for r in batch_rows],
-            completions=completions,
-            kata_ids=[r["kata_ids"] for r in batch_rows],
-        )
-        rewards.extend(batch_rewards)
-
-        # Print progress at batch boundaries.
-        running = statistics.fmean(rewards)
-        print(f"  [{batch_end:>4d}/{n}] running mean={running:+.4f}")
-
-    if not rewards:
-        print("baseline_mean=0.0")
-        print("baseline_compile_rate=0.0")
-        print("baseline_full_credit=0.0")
-        return 0
-
-    mean = statistics.fmean(rewards)
-    compile_rate = sum(1 for r in rewards if r > 0) / len(rewards)
-    full_credit  = sum(1 for r in rewards if r >= 0.99) / len(rewards)
-    print(f"\n=== Baseline summary (n={len(rewards)}) ===")
-    print(f"baseline_mean={mean:.4f}")
-    print(f"baseline_compile_rate={compile_rate:.4f}")
-    print(f"baseline_full_credit={full_credit:.4f}")
-    return 0
-
-
 # ─── main ─────────────────────────────────────────────────────────────
 
 def main() -> int:
@@ -579,9 +483,6 @@ def main() -> int:
     splits = full_ds.train_test_split(test_size=EVAL_TEST_SIZE, seed=42)
     train_ds, eval_ds = splits["train"], splits["test"]
     print(f"  split: {len(train_ds)} train / {len(eval_ds)} eval")
-
-    if BASELINE_ONLY:
-        return _run_baseline(model, tokenizer, eval_ds)
 
     grpo_kwargs: dict = dict(
         output_dir=OUTPUT_DIR,
