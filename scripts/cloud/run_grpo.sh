@@ -36,29 +36,24 @@ if ! command -v sbcl >/dev/null; then
     bash "$REPO_ROOT/scripts/cloud/install_sbcl.sh" || fail "install_sbcl.sh failed"
 fi
 command -v sbcl       >/dev/null     || fail "sbcl still not on PATH after install_sbcl.sh"
-# macro-gym install: upstream now has pyproject.toml and the safety+parallel
-# patches landed (commit 39ca165 on jborkowski/macro-gym). We still clone if
-# missing so the dir exists for patch_macro_gym.py to introspect / re-patch
-# in case the user is running an older fork.
+# macro-gym install: v0.3 ships pyproject.toml + the verifier-first
+# MacroGrader API, so a vanilla `pip install -e` is all we need. No more
+# downstream patching — upstream is the source of truth.
 MACRO_GYM_DIR="${MACRO_GYM_DIR:-/workspace/macro-gym}"
-if ! python -c "import macro_gym" 2>/dev/null; then
+if ! python -c "from macro_gym import MacroGrader" 2>/dev/null; then
     if [[ ! -d "$MACRO_GYM_DIR" ]]; then
         echo "  cloning macro-gym to $MACRO_GYM_DIR"
         git clone https://github.com/jborkowski/macro-gym "$MACRO_GYM_DIR" || \
             fail "macro-gym clone failed"
+    else
+        # Update an existing clone to pick up v0.3+ changes.
+        (cd "$MACRO_GYM_DIR" && git pull --ff-only) || \
+            echo "  warning: macro-gym git pull failed; using local checkout"
     fi
     pip install --quiet -e "$MACRO_GYM_DIR" || fail "macro-gym editable install failed"
 fi
-# Apply safety + perf patches (idempotent — no-op on already-patched files).
-# Upstream has these now, but the patcher is kept as a defensive net for
-# older clones or forks.
-if [[ -d "$MACRO_GYM_DIR" ]]; then
-    python3 "$REPO_ROOT/scripts/cloud/patch_macro_gym.py" "$MACRO_GYM_DIR" \
-        2>&1 | sed 's/^/  /' || \
-        echo "  warning: macro-gym patch script returned non-zero; check upstream"
-fi
-python -c "import macro_gym; from macro_gym import MacroEnv" \
-                                      || fail "macro_gym.MacroEnv not importable"
+python -c "from macro_gym import MacroGrader, get_grader, shutdown_grader" \
+                                      || fail "macro_gym v0.3 API (MacroGrader) not importable — old fork?"
 python -c "from unsloth import FastLanguageModel; from trl import GRPOTrainer, GRPOConfig" \
                                       || fail "unsloth/trl not importable — run scripts/cloud/run.sh's pip install first"
 # Disk space: report only. The trainer surfaces real disk problems by

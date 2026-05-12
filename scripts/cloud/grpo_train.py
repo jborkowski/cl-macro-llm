@@ -25,10 +25,9 @@ Optional:
     WANDB_ENTITY       e.g. j14i-n
     WANDB_PROJECT      default cl-macro-llm
 
-Runtime / SBCL parallelism:
-    SBCL_KATA_CACHE        default 16   — how many kata pools to keep alive
-    SBCL_POOL_PER_KATA     default 4    — student SBCL procs per kata
-    SBCL_REWARD_WORKERS    default 16   — thread-pool size for scoring
+Runtime (SBCL parallelism is handled by macro-gym v0.3's MacroGrader):
+    MACRO_GYM_POOL_SIZE    default 6    — SBCL workers in the shared grader pool
+    MACRO_GYM_HEAP_MB      default 384  — per-worker dynamic heap (SBCL)
     LOG_SAMPLES_EVERY      default 25   — steps between sample dumps
     SAMPLES_PER_DUMP       default 4    — rollouts written per dump
 """
@@ -135,10 +134,11 @@ def _maybe_init_wandb() -> bool:
 def load_katas(kata_root: Path) -> Dataset:
     """Walk kata directory tree (cl-ds/* + creative/*), emit prompt+meta rows.
 
-    Side effect: symlinks each kata into macro_gym.env.KATAS_DIR so
-    MacroEnv(kata_id=...) can find it. macro-gym's `KATAS_DIR` is module-
-    level and hardcoded to <package_dir>/../katas, so we shim it via
-    symlinks rather than monkey-patching the module global.
+    Side effect: symlinks each kata into macro-gym's `katas/` directory so
+    `MacroGrader.grade(kata_id, ...)` can resolve them. v0.3's Lisp server
+    hardcodes ``*kata-root*`` to ``"katas/"`` relative to the macro-gym
+    package, so we shim our generated katas into that path rather than
+    monkey-patching the Lisp global.
     """
     rows = []
     candidates = []
@@ -153,9 +153,11 @@ def load_katas(kata_root: Path) -> Dataset:
                 if sub.is_dir() and (sub / "metadata.json").exists():
                     candidates.append(sub)
 
-    # Symlink katas into macro-gym's KATAS_DIR. Idempotent — re-runs just
-    # refresh the links. Skips dirs that don't have the files MacroEnv
-    # needs (setup.lisp + tests.lisp), to avoid load_kata() failures later.
+    # Symlink katas into macro-gym's katas/ dir. Idempotent — re-runs just
+    # refresh the links. Skips dirs missing setup.lisp + tests.lisp to
+    # avoid grader errors later. macro-gym v0.3 still uses
+    # `macro_gym.env.KATAS_DIR` as the canonical path; the new grader
+    # resolves through the same Lisp `*kata-root*`.
     try:
         import macro_gym.env as _mg
         _mg.KATAS_DIR.mkdir(parents=True, exist_ok=True)
@@ -184,7 +186,9 @@ def load_katas(kata_root: Path) -> Dataset:
         if not instruction:
             continue
         rows.append({
-            "kata_id":       kata_dir.name,
+            # macro-gym v0.3's reward_fn expects `kata_ids` (plural) — keep
+            # the dataset column name aligned with the public API.
+            "kata_ids":      kata_dir.name,
             "kata_path":     str(kata_dir.resolve()),
             "prompt":        [
                 {"role": "system", "content": SYSTEM_PROMPT},
@@ -235,89 +239,13 @@ def extract_defmacro(text: str) -> str | None:
     return None  # truncated, never closed
 
 
-# Per-kata pool of MacroEnv instances. macro-gym persists one SBCL
-# subprocess per env; concurrent calls into the same env would corrupt
-# its IO state, so we keep N "students" per kata, check them out for
-# the duration of a step, and check them back in.
-#
-# Memory budget: each SBCL ≈ 50 MB. With 16 cached katas × 4 students =
-# 64 SBCL procs ≈ 3 GB. Tunable via env.
-import queue
+# Reward backend: macro-gym v0.3's MacroGrader (a shared SBCL worker pool
+# with per-worker kata-setup caching). The grader serialises macroexpand
+# requests across MACRO_GYM_POOL_SIZE workers — no per-kata bag, no env
+# checkout, no reset/step state. Trainer's reward fn is just an
+# extract-defmacro shim around grader.grade_batch().
 import random
-import threading
-from concurrent.futures import ThreadPoolExecutor
-
-_ENV_CACHE_MAX        = int(_env("SBCL_KATA_CACHE", "16"))
-_POOL_PER_KATA        = int(_env("SBCL_POOL_PER_KATA", "4"))
-_REWARD_WORKERS       = int(_env("SBCL_REWARD_WORKERS", "16"))
-
-
-class _EnvPool:
-    """Per-kata bag of MacroEnv handles, checked out via a thread-safe queue.
-
-    Newer macro-gym (post-Phase-2-design) takes `kata_id` (string) instead
-    of `kata_dir` (path), and resolves it against `macro_gym.env.KATAS_DIR`.
-    We symlink our /workspace/katas/* into that dir at startup (see
-    load_katas) so kata IDs resolve correctly.
-    """
-
-    def __init__(self, kata_id: str, size: int):
-        from macro_gym import MacroEnv  # lazy import
-        self.kata_id = kata_id
-        self.size = size
-        self._q: queue.Queue = queue.Queue()
-        for _ in range(size):
-            env = MacroEnv(kata_id=kata_id)
-            env.reset()  # loads setup.lisp + tests.lisp; spawns SBCL service
-            self._q.put(env)
-
-    def step(self, defmacro: str, timeout: float = 30.0):
-        env = self._q.get(timeout=timeout)
-        try:
-            # Reset clears _step_count / _prev_results from any prior use,
-            # so each scored completion starts from a clean state.
-            env.reset()
-            return env.step(defmacro)
-        finally:
-            self._q.put(env)
-
-    def close(self) -> None:
-        while True:
-            try:
-                env = self._q.get_nowait()
-            except queue.Empty:
-                return
-            try:
-                env.close()
-            except Exception:
-                pass
-
-
-_pools: dict[str, _EnvPool] = {}
-_pools_lock = threading.Lock()
-
-
-def _get_pool(kata_id: str) -> _EnvPool:
-    """FIFO-evict whole pools when the cache fills."""
-    with _pools_lock:
-        if kata_id in _pools:
-            return _pools[kata_id]
-        if len(_pools) >= _ENV_CACHE_MAX:
-            oldest = next(iter(_pools))
-            _pools[oldest].close()
-            del _pools[oldest]
-        _pools[kata_id] = _EnvPool(kata_id, _POOL_PER_KATA)
-        return _pools[kata_id]
-
-
-def _close_all_pools() -> None:
-    with _pools_lock:
-        for p in _pools.values():
-            try:
-                p.close()
-            except Exception:
-                pass
-        _pools.clear()
+from macro_gym import get_grader, shutdown_grader
 
 
 def _completion_to_text(completion) -> str:
@@ -373,56 +301,44 @@ def _maybe_dump_samples(prompts, completions, kata_ids, rewards) -> None:
         print(f"  sample dump failed: {type(e).__name__}: {e}", file=sys.stderr)
 
 
-def _score_one(completion, kata_id) -> float:
-    text = _completion_to_text(completion)
-    defmacro = extract_defmacro(text)
-    if defmacro is None:
-        return -0.2
-    try:
-        pool = _get_pool(kata_id)
-        _obs, r, _done, _trunc, _info = pool.step(defmacro)
-        return max(-0.5, min(1.5, float(r)))
-    except Exception as e:
-        print(f"  reward err: {kata_id}: {type(e).__name__}: {e}",
-              file=sys.stderr)
-        return -0.3
-
-
 def macro_gym_reward(prompts, completions, **kwargs) -> list[float]:
-    """GRPO reward callable. Scores completions in parallel via a thread
-    pool — each kata has its own bag of SBCL subprocesses so multiple
-    students for the same kata can be scored concurrently. Per completion:
-        1. extract (defmacro …) from text
-        2. submit to a free env from the kata's pool
-        3. clamp to [-0.5, 1.5] in case the env returns out-of-band values
+    """GRPO reward callable backed by macro-gym v0.3's MacroGrader.
+
+    The grader pools MACRO_GYM_POOL_SIZE SBCL workers (default 6), each
+    caching kata setup on first hit, with TTL-based recycling to bound
+    memory drift across thousands of calls. Parallelism is fully
+    delegated — the trainer just extracts the defmacro from each
+    chat-format completion and hands a batch to the grader.
+
+    `kata_ids` is required as a kwarg, supplied by the dataset (rename
+    of the old `kata_id` column for v0.3 API alignment). It is
+    authoritative — TRL's `prompts` arg is intentionally ignored for
+    routing so the model can't game which kata grades its output.
+
     Also writes a sample to OUTPUT_DIR/samples-step-NNN.jsonl every
     LOG_SAMPLES_EVERY training steps (or when control.json sets sample_now).
     """
-    # kata_id is the dataset column; macro-gym resolves it against
-    # macro_gym.env.KATAS_DIR (set up by load_katas symlinks).
-    kata_ids = kwargs.get("kata_id") or []
+    kata_ids = kwargs.get("kata_ids") or []
     if len(kata_ids) != len(completions):
         raise RuntimeError(
             f"reward fn: got {len(completions)} completions but "
             f"{len(kata_ids)} kata_ids"
         )
+    if not completions:
+        return []
 
-    n = len(completions)
-    rewards: list[float] = [0.0] * n
-    if n == 0:
-        return rewards
+    # Chat-format completions need their defmacro extracted; the grader
+    # treats `macro_src` as raw Lisp source. Empty string for completions
+    # with no parseable defmacro — grader returns -0.1 (syntax error).
+    macros = []
+    for c in completions:
+        text = _completion_to_text(c)
+        m = extract_defmacro(text)
+        macros.append(m if m is not None else "")
 
-    workers = min(_REWARD_WORKERS, n)
-    if workers <= 1:
-        for i in range(n):
-            rewards[i] = _score_one(completions[i], kata_ids[i])
-    else:
-        with ThreadPoolExecutor(max_workers=workers,
-                                thread_name_prefix="sbcl-reward") as ex:
-            futs = {ex.submit(_score_one, completions[i], kata_ids[i]): i
-                    for i in range(n)}
-            for fut in futs:
-                rewards[futs[fut]] = fut.result()
+    grader = get_grader()
+    verdicts = grader.grade_batch(list(zip(kata_ids, macros)))
+    rewards = [float(v.get("reward", -0.1)) for v in verdicts]
 
     _maybe_dump_samples(prompts, completions, kata_ids, rewards)
     return rewards
@@ -591,7 +507,7 @@ def _run_baseline(model, tokenizer, eval_ds) -> int:
         batch_rewards = macro_gym_reward(
             prompts=[r["prompt"]   for r in batch_rows],
             completions=completions,
-            kata_id=[r["kata_id"] for r in batch_rows],
+            kata_ids=[r["kata_ids"] for r in batch_rows],
         )
         rewards.extend(batch_rewards)
 
@@ -761,8 +677,8 @@ def main() -> int:
     trainer.model.save_pretrained(str(final_dir))
     tokenizer.save_pretrained(str(final_dir))
 
-    # Tidy up env subprocesses
-    _close_all_pools()
+    # Tidy up the shared SBCL worker pool (v0.3 grader's singleton).
+    shutdown_grader()
 
     print("\n=== Training summary ===")
     print(f"Final adapter: {final_dir}")

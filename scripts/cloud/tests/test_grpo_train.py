@@ -103,6 +103,65 @@ class _FakeDataset:
 _fake_module("datasets", Dataset=_FakeDataset)
 
 
+# Fake macro_gym module — exposes the v0.3 API (get_grader,
+# shutdown_grader, MacroGrader) that grpo_train.py imports at module load.
+# Per-test, swap `_mock_grader._handler` to control what verdicts come back.
+
+class _MockGrader:
+    """In-test grader. `_handler` (if set) is called as
+    handler(kata_id, macro_src) -> Result dict; otherwise returns a
+    zero-reward verdict."""
+
+    def __init__(self):
+        self._handler = None
+
+    def grade(self, kata_id, macro_src, timeout=None):
+        if self._handler is None:
+            return {"reward": 0.0, "passed": 0, "total": 0, "error": None}
+        return self._handler(kata_id, macro_src)
+
+    def grade_batch(self, items, max_workers=None, timeout=None):
+        return [self.grade(kid, src) for kid, src in items]
+
+    def reward_fn(self, prompts, completions, *, kata_ids, timeout=None,
+                  **kwargs):
+        # mirrors the real grader's reward_fn signature
+        return [
+            float(self.grade(k, c).get("reward", -0.1))
+            for k, c in zip(kata_ids, completions)
+        ]
+
+    def close(self):
+        pass
+
+
+# Stash the singleton grader on the fake module itself so that, even if
+# pytest's collector + the script entry point both end up importing this
+# test module (different module objects, different module globals), every
+# `from macro_gym import get_grader` resolves to the SAME grader instance.
+def _get_grader():
+    return sys.modules["macro_gym"]._mock_grader
+
+
+def _shutdown_grader():
+    pass
+
+
+_fake_module(
+    "macro_gym",
+    get_grader=_get_grader,
+    shutdown_grader=_shutdown_grader,
+    MacroGrader=_MockGrader,
+)
+sys.modules["macro_gym"]._mock_grader = _MockGrader()
+# Also stub macro_gym.env which load_katas() reaches for the KATAS_DIR
+# symlink directory.
+import tempfile  # noqa: E402
+_mg_env = types.ModuleType("macro_gym.env")
+_mg_env.KATAS_DIR = Path(tempfile.mkdtemp(prefix="test-macro-gym-katas-"))
+sys.modules["macro_gym.env"] = _mg_env
+
+
 # Now we can safely import grpo_train.
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))   # scripts/cloud
@@ -253,132 +312,100 @@ def test_load_katas_empty_root(tmp_path):
 
 # ─── tests: macro_gym_reward (with mock env) ──────────────────────────
 
-class _MockEnv:
-    """Reward = 1.0 if defmacro contains 'good', else -0.4.
+# ─── tests: macro_gym_reward (against mocked grader) ──────────────────
+#
+# In v0.3, the trainer delegates entirely to macro_gym.MacroGrader via
+# get_grader() singleton. Tests swap _mock_grader._handler per-test to
+# control what verdicts come back; grpo_train.py never sees the real grader.
 
-    Matches the current macro_gym.MacroEnv contract: takes `kata_id`,
-    requires `reset()` before `step()`. _EnvPool calls both."""
+def _set_grader_handler(handler):
+    """Install a (kata_id, macro_src) -> verdict-dict handler on the mock.
 
-    def __init__(self, kata_id):
-        self.kata_id = kata_id
-        self.closed = False
-        self._reset_count = 0
-
-    def reset(self, seed=None, options=None):
-        self._reset_count += 1
-        return "obs", {"kata_id": self.kata_id}
-
-    def step(self, defmacro):
-        r = 1.0 if "good" in defmacro else -0.4
-        return None, r, True, False, {}
-
-    def close(self):
-        self.closed = True
+    Resolves via `sys.modules["macro_gym"]` so it works whether this test
+    module is loaded once or twice (script entry vs pytest collector).
+    """
+    sys.modules["macro_gym"]._mock_grader._handler = handler
 
 
-def _install_mock_macro_gym(env_cls):
-    mod = types.ModuleType("macro_gym")
-    mod.MacroEnv = env_cls
-    sys.modules["macro_gym"] = mod
-
-
-def _reset_pools(monkeypatch=None):
-    """Reset the per-kata SBCL pool cache + force single-threaded reward
-    for deterministic ordering in assertions."""
-    grpo_train._close_all_pools()
-    if monkeypatch is not None:
-        monkeypatch.setattr(grpo_train, "_REWARD_WORKERS", 1)
-        monkeypatch.setattr(grpo_train, "_POOL_PER_KATA", 1)
+def _reset_grader(monkeypatch=None):
+    sys.modules["macro_gym"]._mock_grader._handler = None
 
 
 def test_macro_gym_reward_happy_path(monkeypatch):
-    _install_mock_macro_gym(_MockEnv)
-    _reset_pools(monkeypatch)
+    """Defmacro containing 'good' gets reward 1.0; truncated or missing
+    defmacro feeds an empty string to the grader (the trainer's
+    extract_defmacro returns None there, we pass '' downstream which the
+    grader treats as a syntax error → -0.1)."""
+    _set_grader_handler(lambda kid, src:
+                        {"reward": 1.0 if "good" in src else -0.1})
     completions = [
         "<think>plan</think>\n(defmacro good (x) `(list ,x))",
-        "(defmacro bad (x) `(broken",   # truncated → -0.2
-        "no macro at all here",          # no defmacro → -0.2
+        "(defmacro bad (x) `(broken",   # truncated → extract returns None → ''
+        "no macro at all here",          # no defmacro → extract returns None → ''
     ]
     rewards = grpo_train.macro_gym_reward(
         prompts=[None, None, None],
         completions=completions,
-        kata_id=["ka", "kb", "kc"],
+        kata_ids=["ka", "kb", "kc"],
     )
-    assert rewards == [1.0, -0.2, -0.2]
+    assert rewards == [1.0, -0.1, -0.1]
 
 
-def test_macro_gym_reward_clamps_to_upper_bound(monkeypatch):
-    class _CrazyEnv:
-        def __init__(self, kata_id): pass
-        def reset(self, seed=None, options=None):
-            return "obs", {}
-        def step(self, defmacro):
-            return None, 99.0, True, False, {}
-        def close(self): pass
-
-    _install_mock_macro_gym(_CrazyEnv)
-    _reset_pools(monkeypatch)
+def test_macro_gym_reward_passes_grader_value_through(monkeypatch):
+    """Trainer no longer client-side-clamps rewards — the grader's reward
+    scale (-0.1 / 0.0 / 0.1-0.9 / 1.0) is authoritative."""
+    _set_grader_handler(lambda kid, src: {"reward": 0.7})
     rewards = grpo_train.macro_gym_reward(
         prompts=[None],
         completions=["(defmacro x () nil)"],
-        kata_id=["kx"],
+        kata_ids=["kx"],
     )
-    assert rewards == [1.5]
+    assert rewards == [0.7]
 
 
-def test_macro_gym_reward_clamps_to_lower_bound(monkeypatch):
-    class _NegEnv:
-        def __init__(self, kata_id): pass
-        def reset(self, seed=None, options=None):
-            return "obs", {}
-        def step(self, defmacro):
-            return None, -99.0, True, False, {}
-        def close(self): pass
-
-    _install_mock_macro_gym(_NegEnv)
-    _reset_pools(monkeypatch)
+def test_macro_gym_reward_handles_grader_error_field(monkeypatch):
+    """If the grader returns an error-tagged Result, the reward field still
+    drives the trainer (typically -0.1 from the grader for protocol failures)."""
+    _set_grader_handler(lambda kid, src: {
+        "reward": -0.1, "passed": 0, "total": 0,
+        "error": {"type": "timeout", "message": "macroexpand timeout"},
+    })
     rewards = grpo_train.macro_gym_reward(
         prompts=[None],
         completions=["(defmacro x () nil)"],
-        kata_id=["kx"],
+        kata_ids=["kx"],
     )
-    assert rewards == [-0.5]
+    assert rewards == [-0.1]
 
 
-def test_macro_gym_reward_step_error_penalised(monkeypatch):
-    class _BoomEnv:
-        def __init__(self, kata_id): pass
-        def reset(self, seed=None, options=None):
-            return "obs", {}
-        def step(self, defmacro):
-            raise RuntimeError("sbcl died")
-        def close(self): pass
-
-    _install_mock_macro_gym(_BoomEnv)
-    _reset_pools(monkeypatch)
+def test_macro_gym_reward_missing_reward_field_defaults(monkeypatch):
+    """If the grader returns a verdict with no reward (malformed Result),
+    the trainer falls back to -0.1 (syntax-error tier)."""
+    _set_grader_handler(lambda kid, src: {})   # empty verdict
     rewards = grpo_train.macro_gym_reward(
         prompts=[None],
         completions=["(defmacro x () nil)"],
-        kata_id=["kx"],
+        kata_ids=["kx"],
     )
-    assert rewards == [-0.3]
+    assert rewards == [-0.1]
 
 
 def test_macro_gym_reward_mismatched_lengths_raises(monkeypatch):
-    _install_mock_macro_gym(_MockEnv)
-    _reset_pools(monkeypatch)
     import pytest
+    _reset_grader()
     with pytest.raises(RuntimeError, match="reward fn"):
         grpo_train.macro_gym_reward(
             prompts=[None, None],
             completions=["(defmacro a () nil)", "(defmacro b () nil)"],
-            kata_id=["ka"],
+            kata_ids=["ka"],
         )
 
 
 def test_macro_gym_reward_completion_as_messages(monkeypatch):
-    _install_mock_macro_gym(_MockEnv)
-    _reset_pools(monkeypatch)
+    """Chat-format completions (list of role/content dicts) → _completion_to_text
+    extracts the assistant turn before defmacro extraction."""
+    _set_grader_handler(lambda kid, src:
+                        {"reward": 1.0 if "good" in src else -0.1})
     msgs = [
         {"role": "user",      "content": "write the macro"},
         {"role": "assistant", "content": "(defmacro good (x) `(list ,x))"},
@@ -386,67 +413,44 @@ def test_macro_gym_reward_completion_as_messages(monkeypatch):
     rewards = grpo_train.macro_gym_reward(
         prompts=[None],
         completions=[msgs],
-        kata_id=["kx"],
+        kata_ids=["kx"],
     )
     assert rewards == [1.0]
 
 
-def test_pool_eviction_fifo(monkeypatch):
-    """When the kata-pool cache fills, the oldest pool should be closed
-    and dropped."""
-    instantiated: list[str] = []
-
-    class _CountingEnv:
-        def __init__(self, kata_id):
-            instantiated.append(kata_id)
-            self.kata_id = kata_id
-            self.closed = False
-        def reset(self, seed=None, options=None):
-            return "obs", {"kata_id": self.kata_id}
-        def step(self, defmacro):
-            return None, 0.0, True, False, {}
-        def close(self):
-            self.closed = True
-
-    _install_mock_macro_gym(_CountingEnv)
-    grpo_train._close_all_pools()
-    monkeypatch.setattr(grpo_train, "_ENV_CACHE_MAX", 2)
-    monkeypatch.setattr(grpo_train, "_POOL_PER_KATA", 1)
-
-    pa = grpo_train._get_pool("ka")
-    pb = grpo_train._get_pool("kb")
-    assert "ka" in grpo_train._pools and "kb" in grpo_train._pools
-    pc = grpo_train._get_pool("kc")  # evicts ka's pool
-    assert "ka" not in grpo_train._pools
-    assert "kb" in grpo_train._pools and "kc" in grpo_train._pools
-    assert instantiated == ["ka", "kb", "kc"]
+def test_macro_gym_reward_empty_returns_empty(monkeypatch):
+    _reset_grader()
+    assert grpo_train.macro_gym_reward(
+        prompts=[], completions=[], kata_ids=[],
+    ) == []
 
 
-def test_pool_per_kata_size(monkeypatch):
-    """A kata pool of size N creates exactly N MacroEnv instances upfront."""
-    instantiated: list[str] = []
-
-    class _CountingEnv:
-        def __init__(self, kata_id):
-            instantiated.append(kata_id)
-        def reset(self, seed=None, options=None):
-            return "obs", {}
-        def step(self, defmacro):
-            return None, 0.0, True, False, {}
-        def close(self): pass
-
-    _install_mock_macro_gym(_CountingEnv)
-    grpo_train._close_all_pools()
-    monkeypatch.setattr(grpo_train, "_POOL_PER_KATA", 4)
-
-    grpo_train._get_pool("ka")
-    assert len([k for k in instantiated if k == "ka"]) == 4
+def test_macro_gym_reward_extracts_from_fenced_block(monkeypatch):
+    """A defmacro inside ```lisp fences (common LLM output shape) gets
+    pulled out before the grader sees it."""
+    seen_src = []
+    def _h(kid, src):
+        seen_src.append(src)
+        return {"reward": 0.9}
+    _set_grader_handler(_h)
+    completion = (
+        "Sure, here's the macro:\n"
+        "```lisp\n"
+        "(defmacro foo (x) `(1+ ,x))\n"
+        "```\n"
+        "Done."
+    )
+    rewards = grpo_train.macro_gym_reward(
+        prompts=[None], completions=[completion], kata_ids=["kx"],
+    )
+    assert rewards == [0.9]
+    assert seen_src == ["(defmacro foo (x) `(1+ ,x))"]
 
 
 def test_sample_dump_writes_jsonl(monkeypatch, tmp_path):
     """When LOG_SAMPLES_EVERY and step align, the reward fn writes a JSONL."""
-    _install_mock_macro_gym(_MockEnv)
-    _reset_pools(monkeypatch)
+    _set_grader_handler(lambda kid, src:
+                        {"reward": 1.0 if "good" in src else -0.1})
     monkeypatch.setitem(grpo_train._runtime, "step", 50)
     monkeypatch.setitem(grpo_train._runtime, "log_samples_every", 25)
     monkeypatch.setitem(grpo_train._runtime, "n_samples_per_dump", 2)
@@ -460,7 +464,7 @@ def test_sample_dump_writes_jsonl(monkeypatch, tmp_path):
     grpo_train.macro_gym_reward(
         prompts=[{"role": "user", "content": f"q{i}"} for i in range(3)],
         completions=completions,
-        kata_id=["ka", "kb", "kc"],
+        kata_ids=["ka", "kb", "kc"],
     )
     dump = tmp_path / "samples-step-00050.jsonl"
     assert dump.exists()
@@ -474,8 +478,8 @@ def test_sample_dump_writes_jsonl(monkeypatch, tmp_path):
 
 def test_sample_dump_on_demand(monkeypatch, tmp_path):
     """sample_now=True forces a dump even mid-cycle."""
-    _install_mock_macro_gym(_MockEnv)
-    _reset_pools(monkeypatch)
+    _set_grader_handler(lambda kid, src:
+                        {"reward": 1.0 if "good" in src else -0.1})
     monkeypatch.setitem(grpo_train._runtime, "step", 7)   # mid-cycle
     monkeypatch.setitem(grpo_train._runtime, "log_samples_every", 25)
     monkeypatch.setitem(grpo_train._runtime, "sample_now", True)
@@ -485,7 +489,7 @@ def test_sample_dump_on_demand(monkeypatch, tmp_path):
     grpo_train.macro_gym_reward(
         prompts=[None],
         completions=["(defmacro good (x) `(list ,x))"],
-        kata_id=["ka"],
+        kata_ids=["ka"],
     )
     assert (tmp_path / "samples-step-00007.jsonl").exists()
     # sample_now should auto-clear after firing
