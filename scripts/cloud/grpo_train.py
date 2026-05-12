@@ -70,7 +70,7 @@ KATA_ROOT           = Path(_env("KATA_ROOT", "/workspace/katas"))
 OUTPUT_DIR          = _env("OUTPUT_DIR", "./grpo-output")
 MAX_SEQ_LENGTH      = int(_env("MAX_SEQ_LENGTH", "4096"))
 MAX_COMPLETION_LEN  = int(_env("MAX_COMPLETION_LEN", "1024"))
-NUM_GENERATIONS     = int(_env("NUM_GENERATIONS", "4"))
+NUM_GENERATIONS     = int(_env("NUM_GENERATIONS", "2"))
 MAX_STEPS           = int(_env("MAX_STEPS", "500"))
 LEARNING_RATE       = float(_env("LEARNING_RATE", "5e-7"))
 BETA                = float(_env("BETA", "0.05"))
@@ -502,7 +502,8 @@ def main() -> int:
         num_generations=NUM_GENERATIONS,
         temperature=TEMPERATURE,
         max_completion_length=MAX_COMPLETION_LEN,
-        max_prompt_length=1024,
+        max_prompt_length=512,
+        gradient_checkpointing=True,
         beta=BETA,
         logging_steps=5,
         # trl GRPOConfig.__post_init__ requires eval_batch_size * world_size
