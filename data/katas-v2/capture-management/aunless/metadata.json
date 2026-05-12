@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-cm-006",
+  "instruction": "Write a Common Lisp macro `aunless` (anaphoric unless) that evaluates a test, captures the result in the symbol `it`, and runs the body when `it` is nil. The captured value is still useful inside the body — e.g., to log the falsy value or distinguish nil from no-such-key. Mirror of `awhen` from Paul Graham's On Lisp chapter 14.",
+  "reference_defmacro": "(defmacro aunless (test &body body)\n  `(let ((it ,test))\n     (unless it ,@body)))",
+  "category": "capture-management",
+  "technique": "anaphoric",
+  "complexity": "basic",
+  "quality_score": 0.95,
+  "source": "on-lisp-ch14",
+  "requires_detected": []
+}

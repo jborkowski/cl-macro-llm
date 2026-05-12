@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-dbg-001",
+  "instruction": "Write a Common Lisp macro `with-logging` that takes a label (any literal — keyword, symbol, or string) and a body. The expansion runs the body inside a PROGN, preceded by `(format t \"[enter ~A]~%\" 'label)` and followed by `(format t \"[exit ~A]~%\" 'label)`. The label is quoted in the expansion so it appears verbatim in the trace. Useful for ad-hoc tracing without the full TRACE machinery.",
+  "reference_defmacro": "(defmacro with-logging (label &body body)\n  `(progn\n     (format t \"[enter ~A]~%\" ',label)\n     ,@body\n     (format t \"[exit ~A]~%\" ',label)))",
+  "category": "debugging",
+  "technique": "trace-wrap",
+  "complexity": "basic",
+  "quality_score": 0.95,
+  "source": "hand-curated-cl-idiom",
+  "requires_detected": []
+}

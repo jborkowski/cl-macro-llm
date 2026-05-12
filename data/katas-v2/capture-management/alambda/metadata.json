@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-cm-003",
+  "instruction": "Write a Common Lisp macro `alambda` (anaphoric lambda) that expands into a `labels` form binding the function itself to the captured name `self`, then returns `#'self`. The canonical pattern from Paul Graham's On Lisp chapter 14 and reused in Doug Hoyte's Let Over Lambda chapter 5 — lets a lambda recurse on itself without external naming.",
+  "reference_defmacro": "(defmacro alambda (parms &body body)\n  `(labels ((self ,parms ,@body))\n     #'self))",
+  "category": "capture-management",
+  "technique": "anaphoric",
+  "complexity": "intermediate",
+  "quality_score": 0.95,
+  "source": "on-lisp-ch14+let-over-lambda-ch5",
+  "requires_detected": []
+}

@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-val-003",
+  "instruction": "Write a Common Lisp macro `with-validated-input` taking a binding spec (var value-form predicate) and a body. Expansion: LET-bind the variable to the value-form, then UNLESS the predicate applied to the variable, ERROR with a message that interpolates the value; otherwise run the body with the validated binding in scope. Combines bind + validate + body in one form so the body sees only valid input.",
+  "reference_defmacro": "(defmacro with-validated-input ((var value-form predicate) &body body)\n  `(let ((,var ,value-form))\n     (unless (,predicate ,var) (error \"invalid input: ~A\" ,var))\n     ,@body))",
+  "category": "validation",
+  "technique": "bind-and-validate",
+  "complexity": "intermediate",
+  "quality_score": 0.95,
+  "source": "hand-curated-cl-idiom",
+  "requires_detected": []
+}

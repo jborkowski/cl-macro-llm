@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-rm-001",
+  "instruction": "Write a Common Lisp macro `with-lock-held` that takes a single-element binding `(lock-form)` and a body. The expansion uses UNWIND-PROTECT to acquire the lock (via `(acquire-lock lock-form)`), run the body, and release the lock (via `(release-lock lock-form)`) on any exit — normal, error, or non-local. Idiomatic CL resource-management pattern; the lock-form is re-evaluated in the cleanup branch.",
+  "reference_defmacro": "(defmacro with-lock-held ((lock-form) &body body)\n  `(unwind-protect\n        (progn (acquire-lock ,lock-form) ,@body)\n     (release-lock ,lock-form)))",
+  "category": "resource-management",
+  "technique": "unwind-protect",
+  "complexity": "intermediate",
+  "quality_score": 0.95,
+  "source": "hand-curated-cl-idiom",
+  "requires_detected": []
+}

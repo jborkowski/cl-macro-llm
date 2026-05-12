@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-cm-010",
+  "instruction": "Write a Common Lisp macro `with-collectors` that takes a list of names and a body. For each name, expose it BOTH as a NIL-initialized variable (in the LET sense) AND as a single-argument function (in the FLET sense) that pushes its argument onto the variable. After the body runs, return the nreverse'd lists via VALUES, in the same order as the names. Pattern from Paul Graham's On Lisp chapter 8 accumulator-macro discussion.",
+  "reference_defmacro": "(defmacro with-collectors ((&rest names) &body body)\n  `(let ,(mapcar (lambda (n) (list n nil)) names)\n     (flet ,(mapcar (lambda (n) `(,n (x) (push x ,n))) names)\n       ,@body\n       (values ,@(mapcar (lambda (n) `(nreverse ,n)) names)))))",
+  "category": "capture-management",
+  "technique": "function-capture",
+  "complexity": "advanced",
+  "quality_score": 0.95,
+  "source": "on-lisp-ch8",
+  "requires_detected": []
+}

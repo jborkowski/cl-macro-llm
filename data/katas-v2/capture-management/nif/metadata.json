@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-cm-012",
+  "instruction": "Write a Common Lisp macro `nif` (numeric-if) — anaphoric three-way branch on the sign of a numeric expression. Bind the evaluated value to the captured symbol `it`, then branch: positive runs the first form, zero runs the second, negative runs the third. All three branches can reference `it`. From Paul Graham's On Lisp chapter 14. Expand using nested IF (not CASE) so the expansion uses only special operators at the head of each form.",
+  "reference_defmacro": "(defmacro nif (expr pos zero neg)\n  `(let ((it ,expr))\n     (if (plusp it)\n         ,pos\n         (if (zerop it)\n             ,zero\n             ,neg))))",
+  "category": "capture-management",
+  "technique": "anaphoric",
+  "complexity": "intermediate",
+  "quality_score": 0.9,
+  "source": "on-lisp-ch14",
+  "requires_detected": []
+}

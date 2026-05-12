@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-cm-001",
+  "instruction": "Write a Common Lisp macro `awhen` (anaphoric when) that evaluates a test, captures the result in the symbol `it`, and runs the body if `it` is non-nil. This is the canonical anaphoric pattern from Paul Graham's On Lisp chapter 14: `it` is intentionally captured so the body can reference it.",
+  "reference_defmacro": "(defmacro awhen (test &body body)\n  `(let ((it ,test))\n     (when it ,@body)))",
+  "category": "capture-management",
+  "technique": "anaphoric",
+  "complexity": "basic",
+  "quality_score": 0.95,
+  "source": "on-lisp-ch14",
+  "requires_detected": []
+}

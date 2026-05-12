@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-adv-002a",
+  "instruction": "Write a Common Lisp macro `run-if-set` that takes a test expression and a body. The expansion runs the body ONLY when the test evaluates to non-nil. Pairs with `run-if-unset` (which runs the body when the test is NIL). The instructions differ by ONE word — set vs unset — and the expansions differ by exactly one symbol (WHEN vs UNLESS in surface form).",
+  "reference_defmacro": "(defmacro run-if-set (test &body body)\n  `(when ,test ,@body))",
+  "category": "control-flow",
+  "technique": "conditional",
+  "complexity": "basic",
+  "quality_score": 0.95,
+  "source": "hand-curated-adversarial-pair",
+  "requires_detected": []
+}

@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-cm-009",
+  "instruction": "Write a Common Lisp macro `if-let` that takes a (variable test) binding pair, a then-form, and an else-form. Bind the caller-supplied variable name to the test result, then branch via IF; both branches can reference the bound variable. Standard pattern in Alexandria. Capture-management because the caller's symbol must be placed verbatim into the LET binding.",
+  "reference_defmacro": "(defmacro if-let ((var test) then &optional else)\n  `(let ((,var ,test))\n     (if ,var ,then ,else)))",
+  "category": "capture-management",
+  "technique": "name-capture",
+  "complexity": "basic",
+  "quality_score": 0.95,
+  "source": "alexandria-style",
+  "requires_detected": []
+}

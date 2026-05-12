@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-dbg-002",
+  "instruction": "Write a Common Lisp macro `dbg` that takes one form. The expansion evaluates the form once, binds the result to the symbol `it`, prints `dbg: <form> = <value>` to *trace-output* using FORMAT directive ~S for both the quoted form and the value, then returns the value unchanged. Inspired by Rust's dbg! — transparently insertable inside any larger expression for ad-hoc inspection.",
+  "reference_defmacro": "(defmacro dbg (form)\n  `(let ((it ,form))\n     (format *trace-output* \"dbg: ~S = ~S~%\" ',form it)\n     it))",
+  "category": "debugging",
+  "technique": "tap",
+  "complexity": "basic",
+  "quality_score": 0.95,
+  "source": "hand-curated-rust-inspired",
+  "requires_detected": []
+}

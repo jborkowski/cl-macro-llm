@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-cm-008",
+  "instruction": "Write a Common Lisp macro `when-let` that takes a (variable test) binding pair and a body. Bind the caller-supplied variable name to the test result; if non-nil, run the body with that binding in scope. Standard pattern in Alexandria and many CL libraries. Capture-management because the caller's symbol must be placed verbatim into the LET binding.",
+  "reference_defmacro": "(defmacro when-let ((var test) &body body)\n  `(let ((,var ,test))\n     (when ,var ,@body)))",
+  "category": "capture-management",
+  "technique": "name-capture",
+  "complexity": "basic",
+  "quality_score": 0.95,
+  "source": "alexandria-style",
+  "requires_detected": []
+}

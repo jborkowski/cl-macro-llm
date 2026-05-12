@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-cm-007",
+  "instruction": "Write a Common Lisp macro `aor` (anaphoric or) that evaluates a primary form, binds its result to the captured symbol `it`, then returns `(or it default)`. The variable `it` is intentionally caller-visible inside the default form. Useful for fallback chains where the default needs to inspect what the primary returned. From the Paul Graham anaphoric family.",
+  "reference_defmacro": "(defmacro aor (primary default)\n  `(let ((it ,primary))\n     (or it ,default)))",
+  "category": "capture-management",
+  "technique": "anaphoric",
+  "complexity": "basic",
+  "quality_score": 0.9,
+  "source": "on-lisp-ch14-variant",
+  "requires_detected": []
+}

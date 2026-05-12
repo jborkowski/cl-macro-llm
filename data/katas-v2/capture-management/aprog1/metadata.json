@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-cm-004",
+  "instruction": "Write a Common Lisp macro `aprog1` (anaphoric prog1) that evaluates a first form, binds its result to the captured symbol `it` so the body forms can reference it, then returns `it`. Like CL's PROG1 but with anaphoric access to the returned value — useful for side effects (logging, registration, mutation) that need the value but shouldn't change what the form returns. From Paul Graham's On Lisp chapter 14.",
+  "reference_defmacro": "(defmacro aprog1 (val &body body)\n  `(let ((it ,val))\n     ,@body\n     it))",
+  "category": "capture-management",
+  "technique": "anaphoric",
+  "complexity": "basic",
+  "quality_score": 0.95,
+  "source": "on-lisp-ch14",
+  "requires_detected": []
+}

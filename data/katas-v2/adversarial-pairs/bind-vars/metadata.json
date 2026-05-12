@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-adv-001a",
+  "instruction": "Write a Common Lisp macro `bind-vars` that takes a list of (name value-form) bindings and a body. The bindings are PARALLEL — every value-form is evaluated in the SAME outer environment, so no binding's value-form can see another binding from the same form. Expansion uses LET. Pairs with `bind-vars-star` (sequential, uses LET*) — be careful which one is asked for.",
+  "reference_defmacro": "(defmacro bind-vars (bindings &body body)\n  `(let ,bindings\n     ,@body))",
+  "category": "capture-management",
+  "technique": "parallel-binding",
+  "complexity": "basic",
+  "quality_score": 0.95,
+  "source": "hand-curated-adversarial-pair",
+  "requires_detected": []
+}

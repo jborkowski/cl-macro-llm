@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-dbg-003",
+  "instruction": "Write a Common Lisp macro `trace-when` that takes a runtime condition expression and a body. Expansion: WHEN the condition is true, FORMAT a `[trace]` line to *trace-output*, then run the body. Lighter than always-on logging — the condition gates both the trace and the body's side effects.",
+  "reference_defmacro": "(defmacro trace-when (condition &body body)\n  `(when ,condition\n     (format *trace-output* \"[trace]~%\")\n     ,@body))",
+  "category": "debugging",
+  "technique": "conditional-trace",
+  "complexity": "basic",
+  "quality_score": 0.9,
+  "source": "hand-curated-cl-idiom",
+  "requires_detected": []
+}

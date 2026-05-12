@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-adv-001b",
+  "instruction": "Write a Common Lisp macro `bind-vars-star` that takes a list of (name value-form) bindings and a body. The bindings are SEQUENTIAL — each value-form is evaluated in the environment extended by all PREVIOUS bindings in the same form, so a later binding may reference an earlier one. Expansion uses LET*. Pairs with `bind-vars` (parallel, uses LET) — be careful which one is asked for.",
+  "reference_defmacro": "(defmacro bind-vars-star (bindings &body body)\n  `(let* ,bindings\n     ,@body))",
+  "category": "capture-management",
+  "technique": "sequential-binding",
+  "complexity": "basic",
+  "quality_score": 0.95,
+  "source": "hand-curated-adversarial-pair",
+  "requires_detected": []
+}

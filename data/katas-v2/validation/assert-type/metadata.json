@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-val-001",
+  "instruction": "Write a Common Lisp macro `assert-type` that takes a place and a type designator. The expansion checks `(typep place type)` and signals a TYPE-ERROR (with `:datum` set to the place's value and `:expected-type` set to the type) when the check fails. Idiomatic CL pattern: an explicit, handler-case-able type-error is preferable to a plain ERROR for type assertions.",
+  "reference_defmacro": "(defmacro assert-type (place type)\n  `(unless (typep ,place ',type)\n     (error 'type-error :datum ,place :expected-type ',type)))",
+  "category": "validation",
+  "technique": "type-check",
+  "complexity": "basic",
+  "quality_score": 0.95,
+  "source": "hand-curated-cl-idiom",
+  "requires_detected": []
+}

@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-cm-005",
+  "instruction": "Write a Common Lisp macro `nlet` — the Scheme-style named let. Syntax: `(nlet name ((var init)...) body)`. Expansion uses `labels` to bind `name` to a function of those vars with that body, then immediately calls the function with the initial values. The loop name is intentionally caller-visible so the body can recurse by name. From Doug Hoyte's Let Over Lambda chapter 5.",
+  "reference_defmacro": "(defmacro nlet (name bindings &body body)\n  `(labels ((,name ,(mapcar #'car bindings) ,@body))\n     (,name ,@(mapcar #'cadr bindings))))",
+  "category": "capture-management",
+  "technique": "name-capture",
+  "complexity": "intermediate",
+  "quality_score": 0.95,
+  "source": "let-over-lambda-ch5",
+  "requires_detected": []
+}

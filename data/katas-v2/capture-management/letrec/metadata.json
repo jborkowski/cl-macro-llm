@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-cm-011",
+  "instruction": "Write a Common Lisp macro `letrec` providing Scheme-style mutually-recursive function bindings. Each binding has the shape (name (params...) body...) and may reference any other binding's name in its body. Expand into a LABELS form with the same bindings, then evaluate the user's body. The caller's binding names must remain caller-visible so mutual recursion resolves.",
+  "reference_defmacro": "(defmacro letrec (bindings &body body)\n  `(labels ,bindings\n     ,@body))",
+  "category": "capture-management",
+  "technique": "name-capture",
+  "complexity": "intermediate",
+  "quality_score": 0.9,
+  "source": "scheme-port",
+  "requires_detected": []
+}

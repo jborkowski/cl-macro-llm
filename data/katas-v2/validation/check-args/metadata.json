@@ -1,0 +1,11 @@
+{
+  "idx": "katas-v2-val-002",
+  "instruction": "Write a Common Lisp macro `check-args` that takes a predicate expression and an optional error message string. The expansion signals an error when the predicate evaluates to NIL. If no message is supplied, the default is the literal string \"bad arguments\". Lightweight precondition guard: cheaper than CHECK-TYPE or full contracts, useful at the top of function bodies.",
+  "reference_defmacro": "(defmacro check-args (predicate &optional (message \"bad arguments\"))\n  `(when (not ,predicate)\n     (error ,message)))",
+  "category": "validation",
+  "technique": "precondition",
+  "complexity": "basic",
+  "quality_score": 0.9,
+  "source": "hand-curated-cl-idiom",
+  "requires_detected": []
+}
