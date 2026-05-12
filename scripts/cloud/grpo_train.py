@@ -487,7 +487,7 @@ def main() -> int:
     grpo_kwargs: dict = dict(
         output_dir=OUTPUT_DIR,
         max_steps=MAX_STEPS,
-        per_device_train_batch_size=2,
+        per_device_train_batch_size=1,
         gradient_accumulation_steps=8,
         learning_rate=LEARNING_RATE,
         warmup_steps=10,
